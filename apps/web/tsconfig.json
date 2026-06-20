@@ -1,5 +1,5 @@
 {
-  "extends": "@shipflow/tsconfig/nextjs.json",
+  "extends": "@zenbuild/tsconfig/nextjs.json",
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]

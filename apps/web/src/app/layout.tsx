@@ -1,10 +1,27 @@
 import type { Metadata } from "next";
+import { Instrument_Serif, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
+import "@/styles/landing.css";
+
+const display = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-display-src",
+  display: "swap",
+});
+
+const body = Schibsted_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body-src",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "ShipFlow AI",
+  title: "ZenBuild — Ship features calmly, from request to release",
   description:
-    "AI-assisted product delivery platform: from feature request to shipped, through PRDs, tasks, code, AI review, and human approval.",
+    "ZenBuild is the AI-assisted product delivery platform that moves features from idea to production through a structured workflow: Request → PRD → Tasks → Code → AI Review → Human Approval → Ship.",
 };
 
 export default function RootLayout({
@@ -13,8 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }

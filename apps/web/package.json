@@ -1,5 +1,5 @@
 {
-  "name": "@shipflow/web",
+  "name": "@zenbuild/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,7 +16,7 @@
     "react-dom": "19.2.7"
   },
   "devDependencies": {
-    "@shipflow/tsconfig": "workspace:*",
+    "@zenbuild/tsconfig": "workspace:*",
     "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
