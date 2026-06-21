@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Serif, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 import "@/styles/landing.css";
+import { TRPCReactProvider } from "@/trpc/react";
 
 const display = Instrument_Serif({
   subsets: ["latin"],
@@ -31,7 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
-      <body>{children}</body>
+      <body>
+        <TRPCReactProvider>{children}</TRPCReactProvider>
+      </body>
     </html>
   );
 }

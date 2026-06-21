@@ -1,0 +1,10 @@
+{
+  "extends": "@zenbuild/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["src", "prisma"],
+  "exclude": ["node_modules", "dist", ".turbo"]
+}

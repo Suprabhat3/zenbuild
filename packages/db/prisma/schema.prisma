@@ -1,0 +1,685 @@
+// ZenBuild Prisma schema
+// Conventions:
+//  - Auth tables (User/Session/Account/Verification/Organization/Member/Invitation)
+//    follow BetterAuth + its organization plugin so Phase 2 wires up cleanly.
+//  - Every domain model is tenant-scoped via `organizationId` and indexed on it.
+//  - State machines are modeled as enums; transitions are enforced in the API layer.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  // Prisma 7: connection URL lives in prisma.config.ts (migrations) and is
+  // supplied to PrismaClient via the driver adapter at runtime (see src/client.ts).
+  provider = "postgresql"
+}
+
+// ============================================================================
+// Auth (BetterAuth core)
+// ============================================================================
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions    Session[]
+  accounts    Account[]
+  memberships Member[]
+  invitations Invitation[] @relation("InvitedBy")
+  auditLogs   AuditLog[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // BetterAuth organization plugin: currently-active workspace for this session
+  activeOrganizationId String?
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ============================================================================
+// Tenancy (BetterAuth organization plugin + ZenBuild extensions)
+// ============================================================================
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  metadata  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members         Member[]
+  invitations     Invitation[]
+  projects        Project[]
+  repositories    Repository[]
+  githubInstalls  GithubInstallation[]
+  featureRequests FeatureRequest[]
+  workflowRuns    WorkflowRun[]
+  subscription    Subscription?
+  creditLedger    CreditLedger[]
+  auditLogs       AuditLog[]
+
+  @@map("organization")
+}
+
+model Member {
+  id        String   @id @default(cuid())
+  role      String   @default("member") // owner | admin | member
+  createdAt DateTime @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id        String   @id @default(cuid())
+  email     String
+  role      String   @default("member")
+  status    String   @default("pending") // pending | accepted | rejected | cancelled
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviterId      String
+  inviter        User         @relation("InvitedBy", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
+}
+
+// ============================================================================
+// Domain: Projects & GitHub
+// ============================================================================
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  key         String // short slug, unique per org
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  repositories    Repository[]
+  featureRequests FeatureRequest[]
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("project")
+}
+
+model GithubInstallation {
+  id             String   @id @default(cuid())
+  installationId BigInt   @unique // GitHub App installation id
+  accountLogin   String // org/user the app is installed on
+  accountType    String // "Organization" | "User"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  repositories Repository[]
+
+  @@index([organizationId])
+  @@map("github_installation")
+}
+
+model Repository {
+  id            String   @id @default(cuid())
+  githubId      BigInt // GitHub repo id
+  owner         String
+  name          String
+  fullName      String // owner/name
+  defaultBranch String   @default("main")
+  private       Boolean  @default(true)
+  analysis      Json? // RepoContext snapshot from repo.analyze
+  analyzedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  installationId String?
+  installation   GithubInstallation? @relation(fields: [installationId], references: [id], onDelete: SetNull)
+
+  pullRequests PullRequest[]
+
+  @@unique([organizationId, githubId])
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("repository")
+}
+
+// ============================================================================
+// Domain: Feature requests & the core-loop state machine
+// ============================================================================
+
+enum FeatureRequestStatus {
+  DRAFT
+  CLARIFYING
+  PRD_DRAFTED
+  PRD_APPROVED
+  TASKS_READY
+  IN_DEVELOPMENT
+  IN_REVIEW
+  FIX_NEEDED
+  APPROVED
+  SHIPPED
+  REJECTED
+  DECLINED_DUPLICATE
+}
+
+enum FeatureRequestSource {
+  FORM
+  EMAIL
+  TICKET
+  CALL
+  API
+}
+
+enum FeatureRequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model FeatureRequest {
+  id              String                 @id @default(cuid())
+  title           String
+  description     String
+  status          FeatureRequestStatus   @default(DRAFT)
+  source          FeatureRequestSource   @default(FORM)
+  priority        FeatureRequestPriority @default(MEDIUM)
+  requesterName   String?
+  requesterEmail  String?
+  rawPayload      Json? // original inbound payload (email/ticket/call)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  clarifications ClarificationMessage[]
+  prd            Prd?
+  tasks          Task[]
+  pullRequests   PullRequest[]
+  reviews        Review[]
+  workflowRuns   WorkflowRun[]
+  releaseDecision ReleaseDecision?
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([status])
+  @@map("feature_request")
+}
+
+enum ClarificationRole {
+  AGENT
+  USER
+}
+
+model ClarificationMessage {
+  id        String            @id @default(cuid())
+  role      ClarificationRole
+  content   String
+  metadata  Json? // e.g. agent decision: ASK | EDUCATE | PROCEED
+  createdAt DateTime          @default(now())
+
+  featureRequestId String
+  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+
+  @@index([featureRequestId])
+  @@map("clarification_message")
+}
+
+// ============================================================================
+// Domain: PRD
+// ============================================================================
+
+model Prd {
+  id            String   @id @default(cuid())
+  version       Int      @default(1)
+  content       Json // structured: problem, goals, nonGoals, userStories, acceptanceCriteria, edgeCases, successMetrics
+  markdown      String // rendered representation
+  approvedAt    DateTime?
+  approvedById  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  featureRequestId String         @unique
+  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+
+  versions PrdVersion[]
+
+  @@map("prd")
+}
+
+model PrdVersion {
+  id        String   @id @default(cuid())
+  version   Int
+  content   Json
+  markdown  String
+  createdAt DateTime @default(now())
+
+  prdId String
+  prd   Prd    @relation(fields: [prdId], references: [id], onDelete: Cascade)
+
+  @@unique([prdId, version])
+  @@map("prd_version")
+}
+
+// ============================================================================
+// Domain: Tasks (Kanban)
+// ============================================================================
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id                 String       @id @default(cuid())
+  title              String
+  description        String
+  acceptanceCriteria Json? // string[]
+  status             TaskStatus   @default(BACKLOG)
+  priority           TaskPriority @default(MEDIUM)
+  estimate           Int? // story points
+  rank               String // lexorank for board ordering
+  suggestedAreas     Json? // files/areas hint for the coding agent
+  assigneeId         String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  featureRequestId String
+  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+
+  dependsOn    TaskDependency[] @relation("Dependent")
+  dependencyOf TaskDependency[] @relation("Dependency")
+  pullRequests PullRequest[]
+
+  @@index([featureRequestId])
+  @@index([status])
+  @@map("task")
+}
+
+model TaskDependency {
+  id           String @id @default(cuid())
+  dependentId  String
+  dependencyId String
+
+  dependent  Task @relation("Dependent", fields: [dependentId], references: [id], onDelete: Cascade)
+  dependency Task @relation("Dependency", fields: [dependencyId], references: [id], onDelete: Cascade)
+
+  @@unique([dependentId, dependencyId])
+  @@map("task_dependency")
+}
+
+// ============================================================================
+// Domain: Pull requests, reviews, issues
+// ============================================================================
+
+enum PullRequestStatus {
+  OPEN
+  CLOSED
+  MERGED
+  DRAFT
+}
+
+enum PullRequestOrigin {
+  AGENT // opened by ZenBuild coding agent
+  EXTERNAL // opened by a human/agent on GitHub
+}
+
+model PullRequest {
+  id           String            @id @default(cuid())
+  number       Int
+  title        String
+  body         String?
+  status       PullRequestStatus @default(OPEN)
+  origin       PullRequestOrigin @default(EXTERNAL)
+  authorLogin  String?
+  headRef      String
+  baseRef      String
+  headSha      String?
+  url          String
+  changedFiles Json? // file paths + additions/deletions
+  diff         String? // unified diff (may be truncated for very large PRs)
+  mergedAt     DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  organizationId   String
+  repositoryId     String
+  repository       Repository      @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  featureRequestId String?
+  featureRequest   FeatureRequest? @relation(fields: [featureRequestId], references: [id], onDelete: SetNull)
+  taskId           String?
+  task             Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  reviews Review[]
+
+  @@unique([repositoryId, number])
+  @@index([organizationId])
+  @@index([featureRequestId])
+  @@map("pull_request")
+}
+
+enum ReviewStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ReviewVerdict {
+  APPROVE
+  REQUEST_CHANGES
+  COMMENT
+}
+
+model Review {
+  id            String        @id @default(cuid())
+  version       Int           @default(1) // re-review iteration
+  status        ReviewStatus  @default(PENDING)
+  verdict       ReviewVerdict?
+  summary       String?
+  githubReviewId BigInt? // posted PR review id
+  model         String? // AI model used
+  promptTokens  Int?
+  completionTokens Int?
+  costUsd       Float?
+  triggeredBy   String? // "webhook" | "manual" | userId
+  createdAt     DateTime      @default(now())
+  completedAt   DateTime?
+
+  organizationId   String
+  pullRequestId    String
+  pullRequest      PullRequest    @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  featureRequestId String?
+  featureRequest   FeatureRequest? @relation(fields: [featureRequestId], references: [id], onDelete: SetNull)
+
+  issues ReviewIssue[]
+
+  @@unique([pullRequestId, version])
+  @@index([organizationId])
+  @@map("review")
+}
+
+enum IssueSeverity {
+  BLOCKING
+  NON_BLOCKING
+}
+
+enum IssueCategory {
+  PRD_REQUIREMENT
+  ACCEPTANCE_CRITERIA
+  ENGINEERING_TASK
+  SECURITY
+  PERFORMANCE
+  EDGE_CASE
+  CODE_QUALITY
+}
+
+enum IssueStatus {
+  OPEN
+  RESOLVED
+  WONT_FIX
+}
+
+model ReviewIssue {
+  id          String        @id @default(cuid())
+  severity    IssueSeverity
+  category    IssueCategory
+  status      IssueStatus   @default(OPEN)
+  title       String
+  explanation String // why this is an issue
+  suggestion  String? // actionable fix
+  filePath    String?
+  line        Int?
+  createdAt   DateTime      @default(now())
+
+  reviewId String
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@map("review_issue")
+}
+
+// ============================================================================
+// Domain: Human approval / release
+// ============================================================================
+
+enum ReleaseDecisionType {
+  APPROVED
+  REJECTED
+}
+
+model ReleaseDecision {
+  id           String              @id @default(cuid())
+  decision     ReleaseDecisionType
+  notes        String?
+  readiness    Json? // AI release-readiness verdict snapshot
+  decidedById  String
+  createdAt    DateTime            @default(now())
+
+  featureRequestId String         @unique
+  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+
+  @@map("release_decision")
+}
+
+// ============================================================================
+// Async workflows (Inngest run tracking, surfaced in-app)
+// ============================================================================
+
+enum WorkflowType {
+  CLARIFY
+  PRD_GENERATE
+  TASKS_GENERATE
+  REPO_ANALYZE
+  TASK_IMPLEMENT
+  PR_REVIEW
+  RELEASE_READINESS
+}
+
+enum WorkflowStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model WorkflowRun {
+  id          String         @id @default(cuid())
+  type        WorkflowType
+  status      WorkflowStatus @default(QUEUED)
+  inngestRunId String?
+  progress    Int            @default(0) // 0..100
+  step        String?
+  input       Json?
+  output      Json?
+  error       String?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  organizationId   String
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  featureRequestId String?
+  featureRequest   FeatureRequest? @relation(fields: [featureRequestId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([featureRequestId])
+  @@map("workflow_run")
+}
+
+// ============================================================================
+// Billing (Razorpay) & usage credits
+// ============================================================================
+
+enum PlanTier {
+  FREE
+  PRO
+  TEAM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+  TRIALING
+}
+
+model Subscription {
+  id                  String             @id @default(cuid())
+  plan                PlanTier           @default(FREE)
+  status              SubscriptionStatus @default(ACTIVE)
+  razorpayCustomerId  String?
+  razorpaySubId       String?
+  currentPeriodEnd    DateTime?
+  reviewCreditsTotal  Int                @default(0)
+  reviewCreditsUsed   Int                @default(0)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("subscription")
+}
+
+enum CreditReason {
+  PRD_GENERATE
+  TASKS_GENERATE
+  REPO_ANALYZE
+  TASK_IMPLEMENT
+  PR_REVIEW
+  RELEASE_READINESS
+  GRANT
+  RESET
+}
+
+model CreditLedger {
+  id        String       @id @default(cuid())
+  reason    CreditReason
+  delta     Int // negative = consumed, positive = granted
+  balance   Int // running balance after this entry
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("credit_ledger")
+}
+
+// ============================================================================
+// Audit log
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String // e.g. "prd.approve", "release.approve"
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorId        String?
+  actor          User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@map("audit_log")
+}
