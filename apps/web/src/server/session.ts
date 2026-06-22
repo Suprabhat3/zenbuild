@@ -1,13 +1,22 @@
 import type { AuthSession } from "@zenbuild/api";
+import { auth } from "@zenbuild/auth";
 
 /**
- * Resolves the current request's auth session.
- *
- * Phase 1 placeholder: always returns null (unauthenticated). Phase 2 replaces
- * this body with a BetterAuth lookup (read the session cookie, load the user and
- * their active organization) — the rest of the app already consumes the typed
- * `AuthSession`, so nothing downstream changes when this is filled in.
+ * Resolves the current request's auth session from BetterAuth and maps it to the
+ * transport-agnostic `AuthSession` the API package consumes. Returns `null` when
+ * there is no valid session.
  */
-export async function getAuthSession(_headers: Headers): Promise<AuthSession | null> {
-  return null;
+export async function getAuthSession(headers: Headers): Promise<AuthSession | null> {
+  const result = await auth.api.getSession({ headers });
+  if (!result?.user) return null;
+
+  return {
+    user: {
+      id: result.user.id,
+      email: result.user.email,
+      name: result.user.name,
+      image: result.user.image ?? null,
+    },
+    activeOrganizationId: result.session.activeOrganizationId ?? null,
+  };
 }

@@ -15,7 +15,7 @@ export function FinalCta() {
             ZenBuild gives your team one clear, reviewable path to production.
           </p>
           <div className="hero-actions">
-            <a href="#pricing" className="btn btn-accent">
+            <a href="/sign-up" className="btn btn-accent">
               Start building free
               <ArrowRight size={18} />
             </a>

@@ -4,7 +4,9 @@
    Grotesk pairing, but its own structure & layout language.
    ============================================================ */
 
-:root {
+/* Scoped to `.landing` so the editorial palette — including the shared
+   `--radius` token — never leaks into the shadcn-themed app/auth pages. */
+.landing {
   --bg: #faf5ec;
   --bg-deep: #f2ebdd;
   --paper: #fffdf8;

@@ -47,7 +47,7 @@ export function Hero() {
         </p>
 
         <div className="hero-actions">
-          <a href="#pricing" className="btn btn-accent">
+          <a href="/sign-up" className="btn btn-accent">
             Start building free
             <ArrowRight size={18} />
           </a>

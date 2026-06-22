@@ -74,7 +74,7 @@ export function Pricing() {
                   </li>
                 ))}
               </ul>
-              <a href="#" className={`btn ${p.ctaClass}`}>
+              <a href="/sign-up" className={`btn ${p.ctaClass}`}>
                 {p.cta}
               </a>
             </Reveal>

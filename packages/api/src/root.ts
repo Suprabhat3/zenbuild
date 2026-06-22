@@ -1,10 +1,12 @@
 import { z } from "zod";
 
+import { memberRouter } from "./routers/member";
+import { viewerRouter } from "./routers/viewer";
 import { createTRPCRouter, publicProcedure } from "./trpc";
 
 /**
- * Root application router. Feature routers (org, project, featureRequest, prd,
- * task, github, review, billing, …) are merged in here as each phase lands.
+ * Root application router. Feature routers (project, featureRequest, prd, task,
+ * github, review, billing, …) are merged in here as each phase lands.
  */
 export const appRouter = createTRPCRouter({
   health: publicProcedure.query(({ ctx }) => {
@@ -18,6 +20,9 @@ export const appRouter = createTRPCRouter({
   echo: publicProcedure
     .input(z.object({ message: z.string() }))
     .query(({ input }) => ({ message: input.message })),
+
+  viewer: viewerRouter,
+  member: memberRouter,
 });
 
 export type AppRouter = typeof appRouter;

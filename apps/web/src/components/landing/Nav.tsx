@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LogoMark } from "./icons";
+import { authClient } from "@/lib/auth-client";
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
+  const { data: session, isPending } = authClient.useSession();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -12,6 +15,8 @@ export function Nav() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const authed = Boolean(session?.user);
 
   return (
     <nav className={`nav ${scrolled ? "scrolled" : ""}`}>
@@ -29,12 +34,24 @@ export function Nav() {
         </div>
 
         <div className="nav-cta">
-          <a href="#" className="nav-signin">
-            Sign in
-          </a>
-          <a href="#pricing" className="btn btn-primary btn-sm">
-            Get started
-          </a>
+          {authed ? (
+            <Link href="/dashboard" className="btn btn-primary btn-sm">
+              Go to dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="nav-signin"
+                style={{ opacity: isPending ? 0.6 : 1 }}
+              >
+                Sign in
+              </Link>
+              <Link href="/sign-up" className="btn btn-primary btn-sm">
+                Get started
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

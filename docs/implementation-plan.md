@@ -10,6 +10,31 @@
 
 ---
 
+## Progress tracker
+
+| Phase | Title | Status |
+|-------|-------|--------|
+| 0 | Decisions locked | ✅ Done |
+| 1 | Foundation: data, tRPC, env | ✅ Done |
+| 2 | Auth & Multi-tenant Workspaces | ✅ Done |
+| 3 | App Shell, Projects & Feature-Request Intake | ⬜ Not started |
+| 4 | Product Discovery: Clarification + PRD Generation | ⬜ Not started |
+| 5 | PRD Editor & Approval | ⬜ Not started |
+| 6 | Planning: Task Generation + Kanban | ⬜ Not started |
+| 7 | GitHub App & Repository Integration | ⬜ Not started |
+| 8 | Coding Agent | ⬜ Not started |
+| 9 | AI Code Review | ⬜ Not started |
+| 10 | Fix Loop & Re-Review | ⬜ Not started |
+| 11 | Release Readiness | ⬜ Not started |
+| 12 | Human Approval & Ship | ⬜ Not started |
+| 13 | Billing & Credits (Razorpay) | ⬜ Not started |
+| 14 | Polish, Observability & Deploy | ⬜ Not started |
+
+> Legend: ✅ Done · 🚧 In progress · ⬜ Not started. Keep this table and the per-phase
+> "Status" lines in sync as work lands.
+
+---
+
 ## Engineering standards (apply to every phase)
 
 These are acceptance criteria for all work, not a separate phase.
@@ -68,7 +93,14 @@ packages/
 
 ---
 
-# Phase 1 — Foundation: data, tRPC, env
+# Phase 1 — Foundation: data, tRPC, env  ✅ Done
+
+**Status:** Complete. `packages/db` (Prisma 7 + `prisma-client` generator + `@prisma/adapter-pg`
+driver adapter, full domain schema, migration `init` applied to Neon, idempotent seed),
+`packages/env` (zod-validated `serverEnv`/`clientEnv`, single `DATABASE_URL`), `packages/api`
+(tRPC v11 with `public`/`protected`/`org` procedures + `requireRole`, `health` query), and
+`apps/web` tRPC wiring (route handler, React Query provider, RSC caller, `/status` smoke page).
+`pnpm -r typecheck` green; verified end-to-end.
 
 **Goal:** A typed, org-scoped backend skeleton the rest of the app builds on. No features yet.
 
@@ -91,16 +123,21 @@ packages/
 
 ---
 
-# Phase 2 — Auth & Multi-tenant Workspaces
+# Phase 2 — Auth & Multi-tenant Workspaces  ✅ Done
+
+**Status:** Complete and verified end-to-end (signup → default workspace → invite → switch).
+See implementation notes under each item below.
 
 **Goal:** Users can sign up, create/switch organizations, invite teammates. Maps to *Authentication*, *Workspace Management*, *SaaS multi-tenancy*.
 
-1. **BetterAuth** in `packages/auth`: email/password + GitHub OAuth provider. Mount `/api/auth/[...all]`.
-2. **Org lifecycle**: create org on first login, `org.create`, `org.list`, `org.switch` (active org stored in cookie/session), `org.update`.
-3. **Members & invites**: `member.list`, `member.invite` (email token), `member.updateRole`, `member.remove`. Role-based guards in `orgProcedure`.
-4. **UI**: auth pages (sign in / sign up), org switcher in app shell, Settings → Members page (Shadcn data table).
+1. ✅ **BetterAuth** in `packages/auth`: email/password + **optional** GitHub OAuth (auto-disabled until creds set). Mounted at `/api/auth/[...all]`. `databaseHooks` provision a default workspace + owner membership + Free subscription (25 credits) on signup; pluggable mailer (`getMailer`/`setMailer`) logs invite links in dev.
+2. ✅ **Org lifecycle**: default org created on signup, plus create / list / switch (active org in session) / update — via the BetterAuth organization client (owns cookie + active-org + CSRF correctly); org-isolated reads exposed through tRPC `viewer` router.
+3. ✅ **Members & invites**: `member.list` + `member.pendingInvitations` (tRPC, org-scoped reads); invite / update-role / remove / cancel via the organization client with the plugin's role-based access control. Last-owner protected in the UI.
+4. ✅ **UI** (shadcn / base-ui, Tailwind v4): sign-in / sign-up (+ GitHub button), accept-invite flow, authenticated app shell (sidebar, **org switcher** w/ create-workspace, user menu, sign-out), dashboard, Settings → General (`org.update`) + Members. Landing-page CTAs (`Sign in` / `Get started`) link into the auth pages and become “Go to dashboard” when authenticated.
 
-**Done when:** New user signs up, lands in a default workspace, can invite a teammate, switch orgs; all data reads are org-isolated.
+**Done when:** New user signs up, lands in a default workspace, can invite a teammate, switch orgs; all data reads are org-isolated. ✅
+
+**Notes / deferred to standards backlog:** automated tests (Vitest/Playwright) for the auth + org flows and a real email provider are tracked under the cross-cutting Engineering Standards and will be added alongside the test-infra setup (currently no test runner is wired yet).
 
 ---
 
