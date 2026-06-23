@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 
 type SocialButtonProps = {
   redirectTo: string;
-  disabled?: boolean;
+  onRequireTerms?: () => boolean;
 };
 
 function GithubIcon() {
@@ -58,15 +58,20 @@ async function startSocialSignIn(
   }
 }
 
-export function GithubButton({ redirectTo, disabled }: SocialButtonProps) {
+export function GithubButton({ redirectTo, onRequireTerms }: SocialButtonProps) {
   const [loading, setLoading] = useState(false);
+
+  function onClick() {
+    if (onRequireTerms && !onRequireTerms()) return;
+    void startSocialSignIn("github", redirectTo, setLoading);
+  }
 
   return (
     <button
       type="button"
       className="auth-btn auth-btn-ghost"
-      onClick={() => startSocialSignIn("github", redirectTo, setLoading)}
-      disabled={disabled || loading}
+      onClick={onClick}
+      disabled={loading}
     >
       <GithubIcon />
       Continue with GitHub
@@ -74,15 +79,20 @@ export function GithubButton({ redirectTo, disabled }: SocialButtonProps) {
   );
 }
 
-export function GoogleButton({ redirectTo, disabled }: SocialButtonProps) {
+export function GoogleButton({ redirectTo, onRequireTerms }: SocialButtonProps) {
   const [loading, setLoading] = useState(false);
+
+  function onClick() {
+    if (onRequireTerms && !onRequireTerms()) return;
+    void startSocialSignIn("google", redirectTo, setLoading);
+  }
 
   return (
     <button
       type="button"
       className="auth-btn auth-btn-ghost"
-      onClick={() => startSocialSignIn("google", redirectTo, setLoading)}
-      disabled={disabled || loading}
+      onClick={onClick}
+      disabled={loading}
     >
       <GoogleIcon />
       Continue with Google
@@ -94,21 +104,25 @@ type OAuthButtonsProps = {
   redirectTo: string;
   githubEnabled: boolean;
   googleEnabled: boolean;
-  disabled?: boolean;
+  onRequireTerms?: () => boolean;
 };
 
 export function OAuthButtons({
   redirectTo,
   githubEnabled,
   googleEnabled,
-  disabled,
+  onRequireTerms,
 }: OAuthButtonsProps) {
   if (!githubEnabled && !googleEnabled) return null;
 
   return (
     <div className="auth-oauth-stack">
-      {googleEnabled && <GoogleButton redirectTo={redirectTo} disabled={disabled} />}
-      {githubEnabled && <GithubButton redirectTo={redirectTo} disabled={disabled} />}
+      {googleEnabled && (
+        <GoogleButton redirectTo={redirectTo} onRequireTerms={onRequireTerms} />
+      )}
+      {githubEnabled && (
+        <GithubButton redirectTo={redirectTo} onRequireTerms={onRequireTerms} />
+      )}
     </div>
   );
 }

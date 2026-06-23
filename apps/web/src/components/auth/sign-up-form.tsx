@@ -5,20 +5,27 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { TermsConsent } from "@/components/auth/terms-consent";
 import { authClient } from "@/lib/auth-client";
 import { signUpSchema } from "@/lib/validators/auth";
 
 type FieldErrors = Partial<Record<"name" | "email" | "password", string>>;
 
+type SignUpFormProps = {
+  redirectTo: string;
+  termsAccepted: boolean;
+  onTermsChange: (checked: boolean) => void;
+  consentError?: string;
+  onRequireTerms: () => boolean;
+};
+
 export function SignUpForm({
   redirectTo,
   termsAccepted,
+  onTermsChange,
+  consentError,
   onRequireTerms,
-}: {
-  redirectTo: string;
-  termsAccepted: boolean;
-  onRequireTerms: () => boolean;
-}) {
+}: SignUpFormProps) {
   const router = useRouter();
   const [values, setValues] = useState({ name: "", email: "", password: "" });
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -111,6 +118,13 @@ export function SignUpForm({
         />
         {errors.password && <p className="auth-error">{errors.password}</p>}
       </div>
+
+      <TermsConsent
+        id="sign-up-terms"
+        checked={termsAccepted}
+        onChange={onTermsChange}
+        error={consentError}
+      />
 
       <button
         type="submit"

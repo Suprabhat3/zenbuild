@@ -318,9 +318,9 @@
   font-size: 14px;
 }
 
-/* terms consent */
-.auth-consent {
-  margin-top: 24px;
+/* terms consent (inside auth-form, above submit button) */
+.auth-form .auth-consent {
+  margin-top: 0;
 }
 .auth-consent-label {
   display: flex;
@@ -354,9 +354,8 @@
   flex-direction: column;
   gap: 12px;
 }
-.auth-social-block + .auth-form,
-.auth-consent + .auth-form {
-  margin-top: 20px;
+.auth-social-block + .auth-form {
+  margin-top: 0;
 }
 .auth-link {
   color: var(--accent-deep);

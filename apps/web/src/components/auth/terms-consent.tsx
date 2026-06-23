@@ -24,7 +24,7 @@ export function TermsConsent({ checked, onChange, id, error }: TermsConsentProps
         <span className="auth-consent-copy">
           I have read and agree to the{" "}
           <Link href="/terms" className="auth-link" target="_blank" rel="noopener noreferrer">
-            Terms of Service
+            Terms and Conditions
           </Link>{" "}
           and{" "}
           <Link href="/privacy" className="auth-link" target="_blank" rel="noopener noreferrer">
