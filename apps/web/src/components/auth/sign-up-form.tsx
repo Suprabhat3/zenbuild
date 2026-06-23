@@ -10,7 +10,15 @@ import { signUpSchema } from "@/lib/validators/auth";
 
 type FieldErrors = Partial<Record<"name" | "email" | "password", string>>;
 
-export function SignUpForm({ redirectTo }: { redirectTo: string }) {
+export function SignUpForm({
+  redirectTo,
+  termsAccepted,
+  onRequireTerms,
+}: {
+  redirectTo: string;
+  termsAccepted: boolean;
+  onRequireTerms: () => boolean;
+}) {
   const router = useRouter();
   const [values, setValues] = useState({ name: "", email: "", password: "" });
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -18,6 +26,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!onRequireTerms()) return;
     const parsed = signUpSchema.safeParse(values);
     if (!parsed.success) {
       setErrors(parsed.error.flatten().fieldErrors as FieldErrors);
@@ -103,7 +112,11 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
         {errors.password && <p className="auth-error">{errors.password}</p>}
       </div>
 
-      <button type="submit" className="auth-btn auth-btn-primary" disabled={loading}>
+      <button
+        type="submit"
+        className="auth-btn auth-btn-primary"
+        disabled={loading || !termsAccepted}
+      >
         {loading ? "Creating account…" : "Create account"}
       </button>
 

@@ -3,15 +3,27 @@ import { LogoMark, GitHub } from "./icons";
 const COLUMNS = [
   {
     title: "Product",
-    links: ["Workflow", "Features", "Product tour", "Pricing", "Changelog"],
+    links: [
+      { label: "Workflow", href: "/#process" },
+      { label: "Features", href: "/#features" },
+      { label: "Product tour", href: "/#product" },
+      { label: "Pricing", href: "/#pricing" },
+    ],
   },
   {
     title: "Platform",
-    links: ["GitHub integration", "AI reviews", "Inngest workflows", "API"],
+    links: [
+      { label: "GitHub integration", href: "/#features" },
+      { label: "AI reviews", href: "/#features" },
+      { label: "Inngest workflows", href: "/#features" },
+    ],
   },
   {
-    title: "Company",
-    links: ["About", "Blog", "Careers", "Contact"],
+    title: "Legal",
+    links: [
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
+    ],
   },
 ];
 
@@ -35,9 +47,9 @@ export function Footer() {
             <div key={col.title}>
               <h4>{col.title}</h4>
               <ul>
-                {col.links.map((l) => (
-                  <li key={l}>
-                    <a href="#">{l}</a>
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href}>{link.label}</a>
                   </li>
                 ))}
               </ul>
@@ -47,8 +59,12 @@ export function Footer() {
 
         <div className="footer-base">
           <span>© {2026} ZenBuild. Built for the ChaiCode hackathon.</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <GitHub size={16} /> Open source
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 16 }}>
+            <a href="/terms">Terms</a>
+            <a href="/privacy">Privacy</a>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <GitHub size={16} /> Open source
+            </span>
           </span>
         </div>
       </div>

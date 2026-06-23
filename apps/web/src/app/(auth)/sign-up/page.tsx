@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { GithubButton } from "@/components/auth/oauth-buttons";
-import { SignUpForm } from "@/components/auth/sign-up-form";
-import { isGithubEnabled } from "@/server/auth-providers";
+import { SignUpPanel } from "@/components/auth/sign-up-panel";
+import { isGithubEnabled, isGoogleEnabled } from "@/server/auth-providers";
 import { getServerSession } from "@/server/auth";
 import { safeRedirectTarget } from "@/lib/validators/auth";
 
@@ -19,8 +18,6 @@ export default async function SignUpPage({
 
   if (await getServerSession()) redirect(target);
 
-  const githubEnabled = isGithubEnabled();
-
   return (
     <>
       <span className="auth-mobile-mark">
@@ -32,14 +29,11 @@ export default async function SignUpPage({
         address.
       </p>
 
-      {githubEnabled && (
-        <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-          <GithubButton redirectTo={target} />
-          <div className="auth-divider">or</div>
-        </div>
-      )}
-
-      <SignUpForm redirectTo={target} />
+      <SignUpPanel
+        redirectTo={target}
+        githubEnabled={isGithubEnabled()}
+        googleEnabled={isGoogleEnabled()}
+      />
     </>
   );
 }

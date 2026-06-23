@@ -17,6 +17,10 @@ const githubEnabled = Boolean(
   serverEnv.GITHUB_CLIENT_ID && serverEnv.GITHUB_CLIENT_SECRET,
 );
 
+const googleEnabled = Boolean(
+  serverEnv.GOOGLE_CLIENT_ID && serverEnv.GOOGLE_CLIENT_SECRET,
+);
+
 const appUrl =
   serverEnv.BETTER_AUTH_URL ??
   process.env.NEXT_PUBLIC_APP_URL ??
@@ -28,7 +32,7 @@ const appUrl =
  * - Email/password with mandatory email verification via a 6-digit OTP (the
  *   emailOTP plugin overrides the default link-based verification). Auto sign-in
  *   is off at signup; the user is signed in only after the code is verified.
- * - Optional GitHub OAuth (auto-disabled until creds set).
+ * - Optional GitHub + Google OAuth (auto-disabled until creds set).
  * - Organization plugin provides multi-tenant workspaces, members, invitations.
  * - Workspaces are NOT auto-provisioned: a verified user picks Individual vs.
  *   Organization in onboarding, which creates the workspace. On session create we
@@ -57,14 +61,24 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
   },
 
-  socialProviders: githubEnabled
-    ? {
-        github: {
-          clientId: serverEnv.GITHUB_CLIENT_ID!,
-          clientSecret: serverEnv.GITHUB_CLIENT_SECRET!,
-        },
-      }
-    : {},
+  socialProviders: {
+    ...(githubEnabled
+      ? {
+          github: {
+            clientId: serverEnv.GITHUB_CLIENT_ID!,
+            clientSecret: serverEnv.GITHUB_CLIENT_SECRET!,
+          },
+        }
+      : {}),
+    ...(googleEnabled
+      ? {
+          google: {
+            clientId: serverEnv.GOOGLE_CLIENT_ID!,
+            clientSecret: serverEnv.GOOGLE_CLIENT_SECRET!,
+          },
+        }
+      : {}),
+  },
 
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days

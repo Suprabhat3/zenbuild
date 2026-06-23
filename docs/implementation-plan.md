@@ -56,7 +56,7 @@ These are acceptance criteria for all work, not a separate phase.
 |------|----------|
 | **Monorepo** | Existing Turborepo + pnpm. Add `packages/*` for shared code, keep `apps/web` as the Next.js app. |
 | **Database + ORM** | **PostgreSQL + Prisma** (Neon for hosted). Single `DATABASE_URL`. |
-| **Auth** | **BetterAuth** (email/password + GitHub OAuth login). |
+| **Auth** | **BetterAuth** (email/password + GitHub + Google OAuth login). |
 | **GitHub** | **GitHub App** (per-org installation, installation tokens via Octokit, app-level webhooks, posts comments as the app). |
 | **AI** | **OpenAI via Vercel AI SDK** (`@ai-sdk/openai`, `OPENAI_API_KEY`) for all AI operations. |
 | **Async** | **Inngest** (Inngest Cloud in prod; dev server locally). |
@@ -130,11 +130,11 @@ See implementation notes under each item below.
 
 **Goal:** Users can sign up, create/switch organizations, invite teammates. Maps to *Authentication*, *Workspace Management*, *SaaS multi-tenancy*.
 
-1. ✅ **BetterAuth** in `packages/auth`: email/password + **optional** GitHub OAuth (auto-disabled until creds set). Mounted at `/api/auth/[...all]`. **Email verification is mandatory via a 6-digit OTP** (the `emailOTP` plugin with `overrideDefaultEmailVerification`): signup no longer auto-signs-in or auto-provisions a workspace — the user verifies the code, then completes onboarding. Sign-in with an unverified email re-sends a code and routes to the verify screen. Transactional email goes through `@zenbuild/email` (Resend when `RESEND_API_KEY` is set, console fallback otherwise; `EMAIL_FROM` configurable), with on-brand HTML templates for the verification code, post-onboarding welcome, and org invites.
+1. ✅ **BetterAuth** in `packages/auth`: email/password + **optional** GitHub and Google OAuth (auto-disabled until creds set). Mounted at `/api/auth/[...all]`. **Email verification is mandatory via a 6-digit OTP** (the `emailOTP` plugin with `overrideDefaultEmailVerification`): signup no longer auto-signs-in or auto-provisions a workspace — the user verifies the code, then completes onboarding. Sign-in with an unverified email re-sends a code and routes to the verify screen. Transactional email goes through `@zenbuild/email` (Resend when `RESEND_API_KEY` is set, console fallback otherwise; `EMAIL_FROM` configurable), with on-brand HTML templates for the verification code, post-onboarding welcome, and org invites.
    - ✅ **Onboarding** (`/onboarding` + `onboarding` tRPC router): after verifying, the user picks **Individual** (solo personal workspace) or **Organization** (team workspace) and a plan. This provisions the org + owner membership + subscription transactionally (with `AuditLog` + credit grant) and sends the welcome email. `Organization.accountType` (`INDIVIDUAL | ORGANIZATION`) records the choice; plan options are server-validated per account type (`FREE`/`PRO` for individuals, `FREE`/`TEAM` for orgs). Razorpay checkout for paid plans lands in Phase 13.
 2. ✅ **Org lifecycle**: default org created on signup, plus create / list / switch (active org in session) / update — via the BetterAuth organization client (owns cookie + active-org + CSRF correctly); org-isolated reads exposed through tRPC `viewer` router.
 3. ✅ **Members & invites**: `member.list` + `member.pendingInvitations` (tRPC, org-scoped reads); invite / update-role / remove / cancel via the organization client with the plugin's role-based access control. Last-owner protected in the UI.
-4. ✅ **UI** (shadcn / base-ui, Tailwind v4): sign-in / sign-up (+ GitHub button), accept-invite flow, authenticated app shell (sidebar, **org switcher** w/ create-workspace, user menu, sign-out), dashboard, Settings → General (`org.update`) + Members. Landing-page CTAs (`Sign in` / `Get started`) link into the auth pages and become “Go to dashboard” when authenticated.
+4. ✅ **UI** (shadcn / base-ui, Tailwind v4): sign-in / sign-up (+ GitHub + Google buttons), **Terms of Service** (`/terms`) and **Privacy Policy** (`/privacy`) pages with editorial styling, **mandatory terms consent checkbox** on sign-in/sign-up (blocks email and OAuth until accepted), accept-invite flow, authenticated app shell (sidebar, **org switcher** w/ create-workspace, user menu, sign-out), dashboard, Settings → General (`org.update`) + Members. Landing-page CTAs (`Sign in` / `Get started`) link into the auth pages and become “Go to dashboard” when authenticated.
 
 **Done when:** New user signs up, lands in a default workspace, can invite a teammate, switch orgs; all data reads are org-isolated. ✅
 

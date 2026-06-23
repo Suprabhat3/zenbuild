@@ -27,6 +27,8 @@ const serverSchema = z.object({
   BETTER_AUTH_URL: z.url().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 
   // Phase 2 — transactional email (Resend). When RESEND_API_KEY is unset the
   // mailer falls back to logging emails to the console (dev). EMAIL_FROM must be
