@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Serif, Schibsted_Grotesk, Geist } from "next/font/google";
 import "./globals.css";
 import "@/styles/landing.css";
+import "@/styles/auth.css";
 import { TRPCReactProvider } from "@/trpc/react";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";

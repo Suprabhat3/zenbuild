@@ -1,18 +1,19 @@
-import Link from "next/link";
+import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
 
 /**
- * Centered, minimal layout for unauthenticated auth screens.
+ * Split-screen shell for unauthenticated auth screens: editorial brand panel on
+ * the left (wide screens), the form on the right. Pages render their own title,
+ * copy, and form into the panel.
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-muted/30 flex min-h-svh flex-col items-center justify-center gap-6 p-6">
-      <Link href="/" className="text-2xl font-semibold tracking-tight">
-        ZenBuild
-      </Link>
-      <div className="w-full max-w-sm">{children}</div>
-      <p className="text-muted-foreground max-w-sm text-center text-xs">
-        By continuing you agree to ship features calmly — from request to release.
-      </p>
+    <div className="authx">
+      <div className="auth-split">
+        <AuthBrandPanel />
+        <main className="auth-panel">
+          <div className="auth-card">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

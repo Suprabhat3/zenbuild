@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { signUpSchema } from "@/lib/validators/auth";
 
@@ -29,6 +26,8 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
     setErrors({});
     setLoading(true);
 
+    // Email verification is required and auto sign-in is off, so signUp creates
+    // the account and triggers an OTP email — it does NOT start a session.
     const { error } = await authClient.signUp.email({
       name: parsed.data.name,
       email: parsed.data.email,
@@ -41,17 +40,23 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
       return;
     }
 
-    // autoSignIn is enabled server-side, so we're authenticated now.
-    router.push(redirectTo);
-    router.refresh();
+    // Off to the verification step with the email + intended destination.
+    const params = new URLSearchParams({
+      email: parsed.data.email,
+      redirectTo,
+    });
+    router.push(`/verify-email?${params.toString()}`);
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
-      <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
-        <Input
+    <form onSubmit={onSubmit} className="auth-form" noValidate>
+      <div className="auth-field">
+        <label className="auth-label" htmlFor="name">
+          Full name
+        </label>
+        <input
           id="name"
+          className="auth-input"
           autoComplete="name"
           placeholder="Ada Lovelace"
           value={values.name}
@@ -59,13 +64,16 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
           aria-invalid={Boolean(errors.name)}
           disabled={loading}
         />
-        {errors.name && <p className="text-destructive text-sm">{errors.name}</p>}
+        {errors.name && <p className="auth-error">{errors.name}</p>}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
+      <div className="auth-field">
+        <label className="auth-label" htmlFor="email">
+          Email
+        </label>
+        <input
           id="email"
+          className="auth-input"
           type="email"
           autoComplete="email"
           placeholder="you@company.com"
@@ -74,13 +82,16 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
           aria-invalid={Boolean(errors.email)}
           disabled={loading}
         />
-        {errors.email && <p className="text-destructive text-sm">{errors.email}</p>}
+        {errors.email && <p className="auth-error">{errors.email}</p>}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
+      <div className="auth-field">
+        <label className="auth-label" htmlFor="password">
+          Password
+        </label>
+        <input
           id="password"
+          className="auth-input"
           type="password"
           autoComplete="new-password"
           placeholder="At least 8 characters"
@@ -89,18 +100,16 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
           aria-invalid={Boolean(errors.password)}
           disabled={loading}
         />
-        {errors.password && (
-          <p className="text-destructive text-sm">{errors.password}</p>
-        )}
+        {errors.password && <p className="auth-error">{errors.password}</p>}
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <button type="submit" className="auth-btn auth-btn-primary" disabled={loading}>
         {loading ? "Creating account…" : "Create account"}
-      </Button>
+      </button>
 
-      <p className="text-muted-foreground text-center text-sm">
+      <p className="auth-foot">
         Already have an account?{" "}
-        <Link href="/sign-in" className="text-foreground font-medium underline-offset-4 hover:underline">
+        <Link href="/sign-in" className="auth-link">
           Sign in
         </Link>
       </p>

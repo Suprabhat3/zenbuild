@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { memberRouter } from "./routers/member";
+import { onboardingRouter } from "./routers/onboarding";
 import { viewerRouter } from "./routers/viewer";
 import { createTRPCRouter, publicProcedure } from "./trpc";
 
@@ -23,6 +24,7 @@ export const appRouter = createTRPCRouter({
 
   viewer: viewerRouter,
   member: memberRouter,
+  onboarding: onboardingRouter,
 });
 
 export type AppRouter = typeof appRouter;

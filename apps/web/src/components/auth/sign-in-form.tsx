@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { signInSchema } from "@/lib/validators/auth";
 
@@ -35,6 +32,22 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
     });
 
     if (error) {
+      // Unverified accounts can't sign in; BetterAuth has just emailed a fresh
+      // OTP, so route the user to the verification step instead of erroring.
+      const unverified =
+        error.status === 403 ||
+        error.code === "EMAIL_NOT_VERIFIED";
+      if (unverified) {
+        toast.message("Verify your email to continue", {
+          description: "We've sent a 6-digit code to your inbox.",
+        });
+        const params = new URLSearchParams({
+          email: parsed.data.email,
+          redirectTo,
+        });
+        router.push(`/verify-email?${params.toString()}`);
+        return;
+      }
       setLoading(false);
       toast.error(error.message ?? "Invalid email or password.");
       return;
@@ -45,11 +58,14 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
+    <form onSubmit={onSubmit} className="auth-form" noValidate>
+      <div className="auth-field">
+        <label className="auth-label" htmlFor="email">
+          Email
+        </label>
+        <input
           id="email"
+          className="auth-input"
           type="email"
           autoComplete="email"
           placeholder="you@company.com"
@@ -58,13 +74,16 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
           aria-invalid={Boolean(errors.email)}
           disabled={loading}
         />
-        {errors.email && <p className="text-destructive text-sm">{errors.email}</p>}
+        {errors.email && <p className="auth-error">{errors.email}</p>}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
+      <div className="auth-field">
+        <label className="auth-label" htmlFor="password">
+          Password
+        </label>
+        <input
           id="password"
+          className="auth-input"
           type="password"
           autoComplete="current-password"
           value={values.password}
@@ -72,18 +91,16 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
           aria-invalid={Boolean(errors.password)}
           disabled={loading}
         />
-        {errors.password && (
-          <p className="text-destructive text-sm">{errors.password}</p>
-        )}
+        {errors.password && <p className="auth-error">{errors.password}</p>}
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <button type="submit" className="auth-btn auth-btn-primary" disabled={loading}>
         {loading ? "Signing in…" : "Sign in"}
-      </Button>
+      </button>
 
-      <p className="text-muted-foreground text-center text-sm">
+      <p className="auth-foot">
         Don&apos;t have an account?{" "}
-        <Link href="/sign-up" className="text-foreground font-medium underline-offset-4 hover:underline">
+        <Link href="/sign-up" className="auth-link">
           Sign up
         </Link>
       </p>

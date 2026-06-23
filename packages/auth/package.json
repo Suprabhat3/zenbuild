@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@zenbuild/db": "workspace:*",
+    "@zenbuild/email": "workspace:*",
     "@zenbuild/env": "workspace:*",
     "better-auth": "^1.6.20"
   },

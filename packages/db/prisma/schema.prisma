@@ -96,14 +96,22 @@ model Verification {
 // Tenancy (BetterAuth organization plugin + ZenBuild extensions)
 // ============================================================================
 
+// Whether a workspace is a single-person personal workspace or a team org.
+// Chosen during onboarding; drives plan options and team features (invites).
+enum AccountType {
+  INDIVIDUAL
+  ORGANIZATION
+}
+
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  logo      String?
-  metadata  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  logo        String?
+  accountType AccountType @default(ORGANIZATION)
+  metadata    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   members         Member[]
   invitations     Invitation[]

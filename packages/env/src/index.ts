@@ -28,6 +28,12 @@ const serverSchema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
 
+  // Phase 2 — transactional email (Resend). When RESEND_API_KEY is unset the
+  // mailer falls back to logging emails to the console (dev). EMAIL_FROM must be
+  // a verified Resend sender; defaults to Resend's zero-config test sender.
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("ZenBuild <onboarding@resend.dev>"),
+
   // Phase 4+ — OpenAI (all AI operations). The model is chosen in code /
   // per-request, not via env.
   OPENAI_API_KEY: z.string().optional(),

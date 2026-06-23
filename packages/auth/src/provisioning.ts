@@ -52,45 +52,6 @@ export async function ensureSubscription(organizationId: string): Promise<void> 
   });
 }
 
-/**
- * Create a brand-new user's default workspace: organization + owner membership +
- * Free subscription, in a single transaction. Returns the new organization id so
- * callers can mark it active. Idempotent per user — if the user somehow already
- * owns a membership we reuse it instead of creating a duplicate.
- */
-export async function provisionDefaultOrganization(user: {
-  id: string;
-  name: string;
-  email: string;
-}): Promise<string> {
-  const existing = await db.member.findFirst({
-    where: { userId: user.id },
-    orderBy: { createdAt: "asc" },
-  });
-  if (existing) return existing.organizationId;
-
-  const displayName = user.name?.trim() || user.email.split("@")[0] || "My";
-  const orgName = `${displayName}'s Workspace`;
-  const slug = await generateUniqueOrgSlug(displayName);
-
-  const organizationId = await db.$transaction(async (tx) => {
-    const org = await tx.organization.create({
-      data: { name: orgName, slug },
-    });
-    await tx.member.create({
-      data: { organizationId: org.id, userId: user.id, role: "owner" },
-    });
-    await tx.subscription.create({
-      data: {
-        organizationId: org.id,
-        plan: "FREE",
-        status: "ACTIVE",
-        reviewCreditsTotal: FREE_PLAN_REVIEW_CREDITS,
-        reviewCreditsUsed: 0,
-      },
-    });
-    return org.id;
-  });
-
-  return organizationId;
-}
+// NOTE: workspaces are no longer auto-provisioned at signup. After a user
+// verifies their email they choose Individual vs. Organization in onboarding,
+// which provisions the workspace + subscription via the `onboarding` tRPC router.

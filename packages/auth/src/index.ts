@@ -1,17 +1,17 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { organization } from "better-auth/plugins";
+import { emailOTP, organization } from "better-auth/plugins";
 
 import { db } from "@zenbuild/db";
+import { getMailer, inviteEmail, verifyOtpEmail } from "@zenbuild/email";
 import { serverEnv } from "@zenbuild/env";
 
-import { getMailer } from "./mailer";
-import {
-  ensureSubscription,
-  provisionDefaultOrganization,
-} from "./provisioning";
+import { ensureSubscription } from "./provisioning";
 import { ORG_ROLES } from "./roles";
+
+/** OTP lifetime, shared between the plugin config and the email copy. */
+const OTP_EXPIRES_IN_SECONDS = 60 * 10; // 10 minutes
 
 const githubEnabled = Boolean(
   serverEnv.GITHUB_CLIENT_ID && serverEnv.GITHUB_CLIENT_SECRET,
@@ -25,10 +25,14 @@ const appUrl =
 /**
  * The single BetterAuth instance for ZenBuild.
  *
- * - Email/password (auto sign-in after signup) + optional GitHub OAuth.
+ * - Email/password with mandatory email verification via a 6-digit OTP (the
+ *   emailOTP plugin overrides the default link-based verification). Auto sign-in
+ *   is off at signup; the user is signed in only after the code is verified.
+ * - Optional GitHub OAuth (auto-disabled until creds set).
  * - Organization plugin provides multi-tenant workspaces, members, invitations.
- * - On signup we provision a default workspace; on session create we default the
- *   active organization to the user's first membership.
+ * - Workspaces are NOT auto-provisioned: a verified user picks Individual vs.
+ *   Organization in onboarding, which creates the workspace. On session create we
+ *   default the active organization to the user's first membership (if any).
  * - `nextCookies()` is intentionally LAST so it can flush auth cookies on
  *   server-action responses.
  */
@@ -43,7 +47,14 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
-    autoSignIn: true,
+    // No auto sign-in: users must verify their email (OTP) before a session is
+    // issued. They're signed in automatically once the code checks out.
+    autoSignIn: false,
+    requireEmailVerification: true,
+  },
+
+  emailVerification: {
+    autoSignInAfterVerification: true,
   },
 
   socialProviders: githubEnabled
@@ -65,18 +76,6 @@ export const auth = betterAuth({
   },
 
   databaseHooks: {
-    user: {
-      create: {
-        after: async (user) => {
-          // Give every new user a workspace to land in.
-          await provisionDefaultOrganization({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-          });
-        },
-      },
-    },
     session: {
       create: {
         before: async (session) => {
@@ -98,6 +97,30 @@ export const auth = betterAuth({
   },
 
   plugins: [
+    // Email verification (and sign-in for unverified users) via a 6-digit OTP.
+    // `overrideDefaultEmailVerification` routes BetterAuth's built-in
+    // verification through this plugin so `requireEmailVerification` sends a code
+    // instead of a magic link.
+    emailOTP({
+      otpLength: 6,
+      expiresIn: OTP_EXPIRES_IN_SECONDS,
+      sendVerificationOnSignUp: true,
+      overrideDefaultEmailVerification: true,
+      async sendVerificationOTP({ email, otp, type }) {
+        // We only use the email-verification flow here; other types are no-ops.
+        if (type !== "email-verification") return;
+        const message = verifyOtpEmail({
+          code: otp,
+          expiresInMinutes: Math.round(OTP_EXPIRES_IN_SECONDS / 60),
+        });
+        await getMailer().send({
+          to: email,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+        });
+      },
+    }),
     organization({
       creatorRole: ORG_ROLES.OWNER,
       // Members are accepted into the org they were invited to; the invite link
@@ -105,18 +128,17 @@ export const auth = betterAuth({
       invitationExpiresIn: 60 * 60 * 24 * 7, // 7 days
       sendInvitationEmail: async (data) => {
         const acceptUrl = `${appUrl}/accept-invite/${data.id}`;
+        const message = inviteEmail({
+          inviterName: data.inviter.user.name || data.inviter.user.email,
+          organizationName: data.organization.name,
+          role: data.role,
+          acceptUrl,
+        });
         await getMailer().send({
           to: data.email,
-          subject: `You're invited to ${data.organization.name} on ZenBuild`,
-          text: [
-            `${data.inviter.user.name || data.inviter.user.email} invited you to join`,
-            `"${data.organization.name}" on ZenBuild as ${data.role}.`,
-            "",
-            "Accept the invitation:",
-            acceptUrl,
-            "",
-            "If you weren't expecting this, you can ignore this email.",
-          ].join("\n"),
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
         });
       },
       organizationCreation: {
@@ -135,9 +157,4 @@ export type Auth = typeof auth;
 export type Session = typeof auth.$Infer.Session;
 
 export { ORG_ROLES, type OrgRole } from "./roles";
-export { getMailer, setMailer, type Mailer, type EmailMessage } from "./mailer";
-export {
-  ensureSubscription,
-  provisionDefaultOrganization,
-  generateUniqueOrgSlug,
-} from "./provisioning";
+export { ensureSubscription, generateUniqueOrgSlug } from "./provisioning";

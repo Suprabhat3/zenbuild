@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
     "@zenbuild/api",
     "@zenbuild/auth",
     "@zenbuild/db",
+    "@zenbuild/email",
     "@zenbuild/env",
   ],
 };

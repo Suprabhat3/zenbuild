@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { EnsureActiveOrg } from "@/components/app/ensure-active-org";
-import { FirstWorkspace } from "@/components/app/first-workspace";
 import { OrgSwitcher } from "@/components/app/org-switcher";
 import { SidebarNav } from "@/components/app/sidebar-nav";
 import { UserMenu } from "@/components/app/user-menu";
@@ -24,9 +24,9 @@ export default async function AppLayout({
     api.viewer.organizations(),
   ]);
 
-  // No workspace at all → first-run experience.
+  // No workspace at all → the user hasn't finished onboarding yet.
   if (organizations.length === 0) {
-    return <FirstWorkspace />;
+    redirect("/onboarding");
   }
 
   // Resolve the active workspace from the session, falling back to the first
