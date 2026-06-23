@@ -17,7 +17,7 @@
 | 0 | Decisions locked | ✅ Done |
 | 1 | Foundation: data, tRPC, env | ✅ Done |
 | 2 | Auth & Multi-tenant Workspaces | ✅ Done |
-| 3 | App Shell, Projects & Feature-Request Intake | ⬜ Not started |
+| 3 | App Shell, Projects & Feature-Request Intake | ✅ Done |
 | 4 | Product Discovery: Clarification + PRD Generation | ⬜ Not started |
 | 5 | PRD Editor & Approval | ⬜ Not started |
 | 6 | Planning: Task Generation + Kanban | ⬜ Not started |
@@ -142,7 +142,21 @@ See implementation notes under each item below.
 
 ---
 
-# Phase 3 — App Shell, Projects & Feature-Request Intake
+# Phase 3 — App Shell, Projects & Feature-Request Intake  ✅ Done
+
+**Status:** Complete and verified. New schema model `IntakeKey` (per-org token +
+HMAC secret, migration `add_intake_key`). tRPC routers: `project` (list/byId/
+create/update/delete — soft-delete, audit-logged, owner/admin gate on delete),
+`featureRequest` (list/byId/create via a shared `createFeatureRequest` helper),
+`intakeKey` (get/rotate — secret returned once), `dashboard` (counts-by-state,
+totals, recent audit activity, in-flight workflow runs). Inbound webhook
+`POST /api/intake` verifies a per-org HMAC-SHA256 signature (timing-safe) over the
+raw body, normalizes email/ticket/call aliases (subject→title, body→description,
+contact* → requester*), and creates a `DRAFT` request — verified end-to-end
+(401 no-creds, 401 bad-sig, 201 valid). UI: Projects (grid + create dialog +
+detail), Feature Requests (list + create dialog + read-only detail with discovery/
+PRD placeholders), real Dashboard, Settings → Intake (endpoint + token + signed
+example + rotate). `pnpm -r typecheck` green.
 
 **Goal:** Dashboard + projects + the entry point of the core loop. Maps to *Dashboard*, *Project View*, *Feature Requests*, *Product Discovery (intake)*.
 

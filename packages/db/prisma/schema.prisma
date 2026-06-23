@@ -123,6 +123,7 @@ model Organization {
   subscription    Subscription?
   creditLedger    CreditLedger[]
   auditLogs       AuditLog[]
+  intakeKey       IntakeKey?
 
   @@map("organization")
 }
@@ -182,6 +183,24 @@ model Project {
   @@unique([organizationId, key])
   @@index([organizationId])
   @@map("project")
+}
+
+// Per-org credentials for the inbound intake webhook (POST /api/intake).
+// `token` is the public identifier the caller sends (X-Intake-Key); `secret`
+// signs the body (HMAC-SHA256, X-Intake-Signature). One key per workspace,
+// rotatable by owners/admins. The secret is only ever surfaced in full at
+// creation/rotation time.
+model IntakeKey {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  secret    String
+  createdAt DateTime @default(now())
+  rotatedAt DateTime @default(now())
+
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("intake_key")
 }
 
 model GithubInstallation {

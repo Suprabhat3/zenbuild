@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const ITEMS = [
   { label: "General", href: "/settings" },
   { label: "Members", href: "/settings/members" },
+  { label: "Intake", href: "/settings/intake" },
 ];
 
 export function SettingsNav() {
