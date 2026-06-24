@@ -18,7 +18,7 @@
 | 1 | Foundation: data, tRPC, env | ✅ Done |
 | 2 | Auth & Multi-tenant Workspaces | ✅ Done |
 | 3 | App Shell, Projects & Feature-Request Intake | ✅ Done |
-| 4 | Product Discovery: Clarification + PRD Generation | ⬜ Not started |
+| 4 | Product Discovery: Clarification + PRD Generation | ✅ Done |
 | 5 | PRD Editor & Approval | ⬜ Not started |
 | 6 | Planning: Task Generation + Kanban | ⬜ Not started |
 | 7 | GitHub App & Repository Integration | ⬜ Not started |
@@ -183,6 +183,14 @@ example + rotate). `pnpm -r typecheck` green.
 4. **Workflow visibility**: `WorkflowRun` rows track step/status/progress; UI shows live status (poll or Inngest realtime).
 
 **Done when:** A request triggers clarification, the agent can ask questions / flag duplicates / proceed, and a complete structured PRD is generated asynchronously with visible progress.
+
+> **Status: ✅ Done.**
+> - **`packages/ai`** (new): OpenAI via AI SDK v6 (`generateObject`). Central model config (`model.ts`), zod structured-output schemas (`ClarificationSchema` = ASK/EDUCATE/PROCEED + questions/reasoning/educationNote; `PrdSchema` = problem/goals/non-goals/user-stories/acceptance-criteria/edge-cases/success-metrics), prompt builders with delimited request context, `runClarification` + `generatePrd` (return validated object + token usage + model), and a `renderPrdMarkdown` renderer.
+> - **`packages/jobs`** (new): Inngest v4 client + `eventType`-typed events (`feature/clarify.requested`, `feature/prd.requested`), `WorkflowRun` tracking helpers (mark running/progress/completed/failed), and two functions — `feature-clarify` (persists an AGENT clarification message with decision metadata, DRAFT→CLARIFYING) and `feature-prd-generate` (upserts `Prd` + `PrdVersion` snapshot, CLARIFYING→PRD_DRAFTED, audit-logged). Both wrap each step in `step.run` (durable/idempotent) with `retries: 2`.
+> - **API**: `clarification.start` / `clarification.answer` (records USER reply, re-runs agent), `prd.get` / `prd.generate` (regeneration bumps version), `workflowRun.latest` (polled for live status). Each creates a `WorkflowRun` (QUEUED) then emits the Inngest event, so intent is never lost if Inngest is unreachable.
+> - **Web**: `/api/inngest` serve route; `DiscoveryPanel` (clarification chat — start, answer questions, proceed/educate handling — with live progress via polling that auto-refreshes server data when a run settles); `PrdView` (structured PRD with version/approval badges). Wired into the feature-request detail page.
+> - **Verified**: `pnpm -r typecheck` green across all 9 packages; env-free AI core (schemas/prompts/markdown) runtime-checked (9/9). Live AI/Inngest runs require `OPENAI_API_KEY` + the Inngest dev server.
+> - **Note**: a `pnpm dedupe` during this phase duplicated `@better-auth/core` and broke web typecheck; fixed by a clean install from the committed lockfile. Do not run `pnpm dedupe` here.
 
 ---
 

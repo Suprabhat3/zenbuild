@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
+  DiscoveryPanel,
+  type ClarificationMessageView,
+} from "@/components/app/discovery-panel";
+import { PrdView } from "@/components/app/prd-view";
+import {
   PRIORITY_LABELS,
   SOURCE_LABELS,
   STATUS_BADGE_VARIANT,
@@ -41,7 +46,16 @@ export default async function FeatureRequestDetailPage({
     throw error;
   }
 
+  const prd = await api.prd.get({ featureRequestId: id });
   const status = request.status as FeatureRequestStatus;
+
+  const messages: ClarificationMessageView[] = request.clarifications.map((m) => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    metadata: (m.metadata as ClarificationMessageView["metadata"]) ?? null,
+    createdAt: m.createdAt,
+  }));
 
   return (
     <div className="space-y-6">
@@ -90,33 +104,24 @@ export default async function FeatureRequestDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Product discovery</CardTitle>
-              <CardDescription>
-                The AI agent will clarify missing context and draft a PRD here.
-                This unlocks in the next phase.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {request.clarifications.length > 0 ? (
-                <ul className="space-y-3">
-                  {request.clarifications.map((m) => (
-                    <li key={m.id} className="text-sm">
-                      <span className="text-muted-foreground font-medium">
-                        {m.role === "AGENT" ? "Agent" : "You"}:
-                      </span>{" "}
-                      {m.content}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  No clarification yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <DiscoveryPanel
+            featureRequestId={request.id}
+            status={status}
+            messages={messages}
+            hasPrd={Boolean(prd)}
+          />
+
+          {prd && (
+            <PrdView
+              content={
+                prd.content as unknown as React.ComponentProps<
+                  typeof PrdView
+                >["content"]
+              }
+              version={prd.version}
+              approvedAt={prd.approvedAt}
+            />
+          )}
         </div>
 
         <div className="space-y-6">

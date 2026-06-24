@@ -1,12 +1,15 @@
 import { z } from "zod";
 
+import { clarificationRouter } from "./routers/clarification";
 import { dashboardRouter } from "./routers/dashboard";
 import { featureRequestRouter } from "./routers/featureRequest";
 import { intakeKeyRouter } from "./routers/intakeKey";
 import { memberRouter } from "./routers/member";
 import { onboardingRouter } from "./routers/onboarding";
+import { prdRouter } from "./routers/prd";
 import { projectRouter } from "./routers/project";
 import { viewerRouter } from "./routers/viewer";
+import { workflowRunRouter } from "./routers/workflowRun";
 import { createTRPCRouter, publicProcedure } from "./trpc";
 
 /**
@@ -33,6 +36,9 @@ export const appRouter = createTRPCRouter({
   featureRequest: featureRequestRouter,
   intakeKey: intakeKeyRouter,
   dashboard: dashboardRouter,
+  clarification: clarificationRouter,
+  prd: prdRouter,
+  workflowRun: workflowRunRouter,
 });
 
 export type AppRouter = typeof appRouter;

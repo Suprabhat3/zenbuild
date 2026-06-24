@@ -1,11 +1,10 @@
 {
-  "name": "@zenbuild/api",
+  "name": "@zenbuild/ai",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./client": "./src/client.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -13,16 +12,12 @@
     "clean": "rimraf .turbo node_modules"
   },
   "dependencies": {
-    "@trpc/server": "^11.18.0",
-    "@zenbuild/db": "workspace:*",
-    "@zenbuild/email": "workspace:*",
+    "@ai-sdk/openai": "^3.0.74",
     "@zenbuild/env": "workspace:*",
-    "@zenbuild/jobs": "workspace:*",
-    "superjson": "^2.2.6",
+    "ai": "^6.0.209",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@trpc/client": "^11.18.0",
     "@types/node": "^26.0.0",
     "@zenbuild/tsconfig": "workspace:*",
     "rimraf": "^6.1.3",
