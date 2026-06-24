@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { TRPCError } from "@trpc/server";
 
 import { DiscoveryPanel, type ClarificationMessageView } from "@/components/app/discovery-panel";
-import { PrdView } from "@/components/app/prd-view";
+import { PrdEditor, type PrdContent } from "@/components/app/prd-editor";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -41,8 +41,12 @@ export default async function FeatureRequestDetailPage({
     throw error;
   }
 
-  const prd = await api.prd.get({ featureRequestId: id });
+  const [prd, activeOrg] = await Promise.all([
+    api.prd.get({ featureRequestId: id }),
+    api.viewer.activeOrganization(),
+  ]);
   const status = request.status as FeatureRequestStatus;
+  const canApprove = activeOrg.role === "owner" || activeOrg.role === "admin";
 
   const messages: ClarificationMessageView[] = request.clarifications.map((m) => ({
     id: m.id,
@@ -105,14 +109,13 @@ export default async function FeatureRequestDetailPage({
           />
 
           {prd && (
-            <PrdView
-              content={
-                prd.content as unknown as React.ComponentProps<
-                  typeof PrdView
-                >["content"]
-              }
+            <PrdEditor
+              featureRequestId={request.id}
+              content={prd.content as unknown as PrdContent}
               version={prd.version}
               approvedAt={prd.approvedAt}
+              status={status}
+              canApprove={canApprove}
             />
           )}
         </div>

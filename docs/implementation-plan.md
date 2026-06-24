@@ -19,7 +19,7 @@
 | 2 | Auth & Multi-tenant Workspaces | ✅ Done |
 | 3 | App Shell, Projects & Feature-Request Intake | ✅ Done |
 | 4 | Product Discovery: Clarification + PRD Generation | ✅ Done |
-| 5 | PRD Editor & Approval | ⬜ Not started |
+| 5 | PRD Editor & Approval | ✅ Done |
 | 6 | Planning: Task Generation + Kanban | ⬜ Not started |
 | 7 | GitHub App & Repository Integration | ⬜ Not started |
 | 8 | Coding Agent | ⬜ Not started |
@@ -202,6 +202,31 @@ example + rotate). `pnpm -r typecheck` green.
 2. **Approve PRD**: `prd.approve` (role-gated) moves state `PRD_DRAFTED → PRD_APPROVED`. Audit logged.
 
 **Done when:** A reviewer can edit every PRD section, regenerate a section via AI, and approve; approval gates Phase 6.
+
+> **Status: ✅ Done.**
+> - **`packages/ai`**: added `regeneratePrdSection` (`src/section.ts`) — regenerates a
+>   single PRD section synchronously via `generateObject`, reusing the exact per-field
+>   schema from `PrdSchema` so a regenerated value satisfies the same constraints as the
+>   full generator. Grounded in the current full PRD (rendered markdown) + original request
+>   + clarification answers, with an optional reviewer instruction. New prompt builder
+>   `buildSectionRegenPrompt` + `PRD_SECTION_LABELS` + `PRD_SECTION_KEYS`/`PrdSectionKeySchema`.
+> - **API** (`prd` router): `update` (human edits — **every save bumps version + writes a
+>   `PrdVersion` snapshot**, re-renders markdown, audit-logged `prd.edit`); `regenerateSection`
+>   (sync AI regen, returns the proposed value for the reviewer to accept & save, audit-logged
+>   `prd.section.regenerate` with token usage for cost visibility); `versions` (full history,
+>   newest first); `restoreVersion` (copies a snapshot forward as a new revision, append-only,
+>   audit-logged `prd.restore`); `approve` (**`requireRole("owner","admin")`**, `PRD_DRAFTED →
+>   PRD_APPROVED`, stamps approver + timestamp, audit-logged `prd.approve`). All ops are
+>   org-scoped through the parent feature request and **locked once the PRD is approved**.
+> - **Web**: new `PrdEditor` client component replacing the read-only view on the
+>   feature-request detail page — section-based editing (textarea/list/user-story editors with
+>   add/remove), per-section **Regenerate with AI** (optional instruction), **Preview** toggle
+>   (reuses `PrdView` to render the live draft), **Save new version**, role-gated **Approve PRD**,
+>   and a **Version history** dialog (preview any version + restore). Approval state surfaced via
+>   alert + locked editing. Editing permitted to any member; approval to owner/admin.
+> - **Verified**: `pnpm -r typecheck` green across all 9 packages; env-free AI-core
+>   (section schema wrap for every key + prompt builder + markdown) runtime-checked (18/18).
+>   Live section regeneration requires `OPENAI_API_KEY`.
 
 ---
 

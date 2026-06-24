@@ -56,3 +56,58 @@ export function buildPrdPrompt(ctx: RequestContext): string {
     ctx,
   )}\n---`;
 }
+
+/** Human-readable labels for each editable PRD section. */
+export const PRD_SECTION_LABELS = {
+  title: "Title",
+  problemStatement: "Problem statement",
+  goals: "Goals",
+  nonGoals: "Non-goals",
+  userStories: "User stories",
+  acceptanceCriteria: "Acceptance criteria",
+  edgeCases: "Edge cases",
+  successMetrics: "Success metrics",
+} as const;
+
+export const PRD_SECTION_SYSTEM = `You are a senior product manager refining one section of an existing Product Requirements Document.
+Regenerate ONLY the requested section. Keep it consistent with the rest of the PRD, the original request, and any clarification answers.
+Ground everything in the provided context — do not invent scope. Acceptance criteria must be testable; goals outcome-focused; non-goals explicit.`;
+
+/**
+ * Builds the prompt for regenerating a single PRD section. The full current PRD
+ * (as markdown) is supplied as context so the model keeps the section coherent
+ * with the rest of the document; an optional instruction steers the rewrite.
+ */
+export function buildSectionRegenPrompt(args: {
+  ctx: RequestContext;
+  sectionLabel: string;
+  currentMarkdown: string;
+  instruction?: string;
+}): string {
+  const { ctx, sectionLabel, currentMarkdown, instruction } = args;
+  const parts = [
+    `Regenerate the "${sectionLabel}" section of the PRD below.`,
+    "",
+    "Original feature request",
+    "---",
+    renderContext(ctx),
+    "---",
+    "",
+    "Current PRD",
+    "---",
+    currentMarkdown,
+    "---",
+  ];
+  if (instruction?.trim()) {
+    parts.push(
+      "",
+      "Reviewer instruction for this section (follow it closely):",
+      instruction.trim(),
+    );
+  }
+  parts.push(
+    "",
+    `Return only the new content for the "${sectionLabel}" section.`,
+  );
+  return parts.join("\n");
+}

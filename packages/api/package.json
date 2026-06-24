@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@trpc/server": "^11.18.0",
+    "@zenbuild/ai": "workspace:*",
     "@zenbuild/db": "workspace:*",
     "@zenbuild/email": "workspace:*",
     "@zenbuild/env": "workspace:*",
