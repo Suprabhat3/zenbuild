@@ -36,39 +36,41 @@ export default async function AppLayout({
     organizations[0];
 
   return (
-    <div className="bg-background flex min-h-svh">
-      <EnsureActiveOrg
-        desiredId={active.id}
-        sessionActiveId={session.activeOrganizationId}
-      />
+    <div className="appx">
+      <div className="app-shell">
+        <EnsureActiveOrg
+          desiredId={active.id}
+          sessionActiveId={session.activeOrganizationId}
+        />
 
-      <aside className="bg-muted/20 hidden w-64 shrink-0 flex-col border-r p-3 md:flex">
-        <div className="px-1 pb-3">
-          <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
+        <aside className="app-sidebar">
+          <Link href="/dashboard" className="app-wordmark">
             ZenBuild
           </Link>
-        </div>
-        <div className="pb-3">
-          <OrgSwitcher organizations={organizations} activeOrgId={active.id} />
-        </div>
-        <SidebarNav />
-        <div className="text-muted-foreground mt-auto px-1 pt-3 text-xs">
-          {active.role === "owner" || active.role === "admin"
-            ? "Workspace admin"
-            : "Member"}
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between gap-3 border-b px-4 md:px-6">
-          <div className="md:hidden">
+          <div className="px-1 pb-3">
             <OrgSwitcher organizations={organizations} activeOrgId={active.id} />
           </div>
-          <div className="ml-auto">
-            <UserMenu user={me} />
+          <SidebarNav />
+          <div className="app-sidebar-foot">
+            {active.role === "owner" || active.role === "admin"
+              ? "Workspace admin"
+              : "Member"}
           </div>
-        </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        </aside>
+
+        <div className="app-main">
+          <header className="app-topbar">
+            <div className="md:hidden">
+              <OrgSwitcher organizations={organizations} activeOrgId={active.id} />
+            </div>
+            <div className="ml-auto">
+              <UserMenu user={me} />
+            </div>
+          </header>
+          <main className="app-content">
+            <div className="app-content-inner">{children}</div>
+          </main>
+        </div>
       </div>
     </div>
   );

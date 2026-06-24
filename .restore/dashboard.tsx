@@ -9,8 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { PageHeader } from "@/components/app/page-header";
-import { StatCard } from "@/components/app/stat-card";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -19,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  STATUS_BADGE_VARIANT,
   STATUS_LABELS,
   type FeatureRequestStatus,
 } from "@/lib/feature-request";
@@ -77,26 +77,31 @@ export default async function DashboardPage() {
   );
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Dashboard"
-        title={org.name}
-        description={
-          <>
-            {org.subscription?.plan ?? "FREE"} plan · your role: {org.role}
-          </>
-        }
-      />
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{org.name}</h1>
+        <p className="text-muted-foreground text-sm">
+          {org.subscription?.plan ?? "FREE"} plan · your role: {org.role}
+        </p>
+      </div>
 
-      <div className="app-stat-grid">
-        {stats.map((stat) => (
-          <StatCard
-            key={stat.label}
-            label={stat.label}
-            value={stat.value}
-            icon={stat.icon}
-          />
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.label}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  {stat.label}
+                </CardTitle>
+                <Icon className="text-muted-foreground size-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold">{stat.value}</div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -111,18 +116,17 @@ export default async function DashboardPage() {
             {populatedStatuses.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 No feature requests yet.{" "}
-                <Link href="/feature-requests" className="font-medium text-primary hover:underline">
+                <Link href="/feature-requests" className="underline">
                   Create your first
                 </Link>{" "}
                 to get started.
               </p>
             ) : (
-              <div className="app-pipeline">
+              <div className="flex flex-wrap gap-2">
                 {populatedStatuses.map((s) => (
-                  <span key={s} className="app-pipeline-chip">
-                    {STATUS_LABELS[s]}
-                    <strong>{summary.countsByStatus[s]}</strong>
-                  </span>
+                  <Badge key={s} variant={STATUS_BADGE_VARIANT[s]}>
+                    {STATUS_LABELS[s]}: {summary.countsByStatus[s]}
+                  </Badge>
                 ))}
               </div>
             )}
@@ -132,7 +136,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Loader2 className="size-4 text-primary" />
+              <Loader2 className="size-4" />
               In-flight workflows
             </CardTitle>
           </CardHeader>
@@ -167,7 +171,7 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Activity className="size-4 text-primary" />
+            <Activity className="size-4" />
             Recent activity
           </CardTitle>
         </CardHeader>
@@ -175,14 +179,17 @@ export default async function DashboardPage() {
           {summary.recentActivity.length === 0 ? (
             <p className="text-muted-foreground text-sm">No activity yet.</p>
           ) : (
-            <ul>
+            <ul className="divide-y">
               {summary.recentActivity.map((log) => (
-                <li key={log.id} className="app-activity-item">
+                <li
+                  key={log.id}
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                >
                   <span>
                     <span className="font-medium">{log.actor}</span>{" "}
                     <span className="text-muted-foreground">{log.action}</span>
                   </span>
-                  <span className="text-muted-foreground shrink-0 text-xs">
+                  <span className="text-muted-foreground text-xs">
                     {log.createdAt.toLocaleString()}
                   </span>
                 </li>

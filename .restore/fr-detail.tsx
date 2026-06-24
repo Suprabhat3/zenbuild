@@ -4,9 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { TRPCError } from "@trpc/server";
 
-import { DiscoveryPanel, type ClarificationMessageView } from "@/components/app/discovery-panel";
-import { PrdView } from "@/components/app/prd-view";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,6 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  DiscoveryPanel,
+  type ClarificationMessageView,
+} from "@/components/app/discovery-panel";
+import { PrdView } from "@/components/app/prd-view";
 import {
   PRIORITY_LABELS,
   SOURCE_LABELS,
@@ -53,13 +58,15 @@ export default async function FeatureRequestDetailPage({
   }));
 
   return (
-    <div className="space-y-8">
-      <Link href="/feature-requests" className="app-back-link">
+    <div className="space-y-6">
+      <Button variant="ghost" size="sm" className="gap-1.5" render={
+        <Link href="/feature-requests" />
+      }>
         <ArrowLeft className="size-4" />
         Feature requests
-      </Link>
+      </Button>
 
-      <header className="space-y-3">
+      <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={STATUS_BADGE_VARIANT[status]}>
             {STATUS_LABELS[status]}
@@ -69,31 +76,31 @@ export default async function FeatureRequestDetailPage({
             {PRIORITY_LABELS[request.priority] ?? request.priority} priority
           </span>
         </div>
-        <h1 className="app-page-title">{request.title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {request.title}
+        </h1>
         <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {request.requesterName && <span>From {request.requesterName}</span>}
           {request.requesterEmail && <span>{request.requesterEmail}</span>}
           {request.project && (
             <Link
               href={`/projects/${request.project.id}`}
-              className="font-medium text-primary hover:underline"
+              className="hover:underline"
             >
               Project: {request.project.name} ({request.project.key})
             </Link>
           )}
         </div>
-      </header>
+      </div>
 
-      <div className="app-detail-grid">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {request.description}
-              </p>
+              <p className="text-sm whitespace-pre-wrap">{request.description}</p>
             </CardContent>
           </Card>
 
@@ -118,18 +125,21 @@ export default async function FeatureRequestDetailPage({
         </div>
 
         <div className="space-y-6">
-          <Card className="app-meta-card">
+          <Card>
             <CardHeader>
               <CardTitle>Progress</CardTitle>
             </CardHeader>
-            <CardContent>
-              <MetaRow label="PRD" value={request.prd ? `v${request.prd.version}` : "—"} />
-              <MetaRow label="Tasks" value={String(request._count.tasks)} />
-              <MetaRow
+            <CardContent className="space-y-2 text-sm">
+              <Row label="PRD" value={request.prd ? `v${request.prd.version}` : "—"} />
+              <Separator />
+              <Row label="Tasks" value={String(request._count.tasks)} />
+              <Separator />
+              <Row
                 label="Pull requests"
                 value={String(request._count.pullRequests)}
               />
-              <MetaRow label="Reviews" value={String(request._count.reviews)} />
+              <Separator />
+              <Row label="Reviews" value={String(request._count.reviews)} />
             </CardContent>
           </Card>
 
@@ -142,7 +152,7 @@ export default async function FeatureRequestDetailPage({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <pre className="app-code">
+                <pre className="bg-muted/40 max-h-72 overflow-auto rounded-md p-3 text-xs">
                   {JSON.stringify(request.rawPayload, null, 2)}
                 </pre>
               </CardContent>
@@ -154,11 +164,11 @@ export default async function FeatureRequestDetailPage({
   );
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="app-meta-row">
-      <span>{label}</span>
-      <span>{value}</span>
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
     </div>
   );
 }

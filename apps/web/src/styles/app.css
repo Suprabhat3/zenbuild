@@ -1,0 +1,647 @@
+/* ============================================================
+   ZenBuild — authenticated app shell
+   Warm editorial palette aligned with landing + auth surfaces.
+   Scoped to `.appx` so shadcn tokens never leak elsewhere.
+   ============================================================ */
+
+.appx {
+  --zb-bg: #faf5ec;
+  --zb-bg-deep: #f2ebdd;
+  --zb-paper: #fffdf8;
+  --zb-ink: #25201a;
+  --zb-ink-soft: #4e463b;
+  --zb-muted: #847a6a;
+  --zb-line: #e6dcc8;
+  --zb-line-soft: #efe7d6;
+  --zb-accent: #e11d48;
+  --zb-accent-deep: #b81239;
+  --zb-accent-soft: #fce9ed;
+  --zb-accent-tint: #f9dfe5;
+  --zb-gold: #c98a2d;
+  --zb-sage: #6e7f5e;
+  --zb-shadow-card: 0 1px 2px rgba(60, 45, 20, 0.05),
+    0 12px 32px -12px rgba(60, 45, 20, 0.18);
+  --zb-shadow-soft: 0 1px 2px rgba(60, 45, 20, 0.04),
+    0 4px 16px -6px rgba(60, 45, 20, 0.1);
+  --font-display: var(--font-display-src), Georgia, serif;
+  --font-body: var(--font-body-src), "Helvetica Neue", sans-serif;
+  --font-heading: var(--font-display);
+
+  /* shadcn token bridge */
+  --background: var(--zb-bg);
+  --foreground: var(--zb-ink);
+  --card: var(--zb-paper);
+  --card-foreground: var(--zb-ink);
+  --popover: var(--zb-paper);
+  --popover-foreground: var(--zb-ink);
+  --primary: var(--zb-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--zb-bg-deep);
+  --secondary-foreground: var(--zb-ink);
+  --muted: var(--zb-bg-deep);
+  --muted-foreground: var(--zb-muted);
+  --accent: var(--zb-accent-soft);
+  --accent-foreground: var(--zb-accent-deep);
+  --destructive: var(--zb-accent-deep);
+  --border: var(--zb-line);
+  --input: var(--zb-line);
+  --ring: var(--zb-accent);
+  --radius: 0.75rem;
+  --sidebar: var(--zb-paper);
+  --sidebar-foreground: var(--zb-ink);
+  --sidebar-primary: var(--zb-accent);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--zb-accent-soft);
+  --sidebar-accent-foreground: var(--zb-accent-deep);
+  --sidebar-border: var(--zb-line-soft);
+  --sidebar-ring: var(--zb-accent);
+
+  min-height: 100svh;
+  background: var(--zb-bg);
+  color: var(--zb-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.appx ::selection {
+  background: var(--zb-accent-tint);
+}
+
+/* ---------- shell ---------- */
+.app-shell {
+  display: flex;
+  min-height: 100svh;
+}
+
+.app-sidebar {
+  display: none;
+  width: 15.5rem;
+  flex-shrink: 0;
+  flex-direction: column;
+  border-right: 1px solid var(--zb-line-soft);
+  background: var(--zb-paper);
+  padding: 1rem 0.75rem;
+}
+@media (min-width: 768px) {
+  .app-sidebar {
+    display: flex;
+  }
+}
+
+.app-wordmark {
+  display: block;
+  padding: 0.25rem 0.5rem 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--zb-ink);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.app-wordmark:hover {
+  color: var(--zb-accent);
+}
+
+.app-sidebar-foot {
+  margin-top: auto;
+  padding: 0.75rem 0.5rem 0.25rem;
+  font-size: 0.75rem;
+  color: var(--zb-muted);
+}
+
+.app-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.app-topbar {
+  display: flex;
+  height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--zb-line-soft);
+  background: color-mix(in srgb, var(--zb-paper) 88%, transparent);
+  backdrop-filter: blur(10px);
+  padding: 0 1rem;
+}
+@media (min-width: 768px) {
+  .app-topbar {
+    padding: 0 1.5rem;
+  }
+}
+
+.app-content {
+  flex: 1;
+  padding: 1.25rem 1rem 2.5rem;
+}
+@media (min-width: 768px) {
+  .app-content {
+    padding: 1.75rem 1.75rem 3rem;
+  }
+}
+.app-content-inner {
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* ---------- sidebar nav ---------- */
+.app-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--zb-muted);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.app-nav-link:hover {
+  background: var(--zb-bg-deep);
+  color: var(--zb-ink);
+}
+.app-nav-link[aria-current="page"] {
+  background: var(--zb-accent-soft);
+  color: var(--zb-accent-deep);
+  font-weight: 600;
+}
+.app-nav-link svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.app-nav-link[aria-current="page"] svg {
+  opacity: 1;
+}
+
+/* ---------- page typography ---------- */
+.app-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--zb-accent);
+}
+.app-eyebrow::before {
+  content: "";
+  width: 1.125rem;
+  height: 1.5px;
+  background: var(--zb-accent);
+}
+
+.app-page-header {
+  margin-bottom: 1.75rem;
+}
+.app-page-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.625rem;
+}
+.app-page-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.625rem, 2.5vw, 2rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--zb-ink);
+}
+.app-page-lede {
+  margin-top: 0.375rem;
+  max-width: 42rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--zb-muted);
+}
+.app-page-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--zb-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.app-back-link:hover {
+  color: var(--zb-ink);
+}
+
+/* ---------- cards & surfaces ---------- */
+.appx [data-slot="card"] {
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 1rem;
+  background: var(--zb-paper);
+  box-shadow: var(--zb-shadow-soft);
+  ring: none;
+}
+.appx [data-slot="card-footer"] {
+  background: var(--zb-bg);
+  border-color: var(--zb-line-soft);
+}
+
+.app-stat-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 1024px) {
+  .app-stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.app-stat-card {
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 1rem;
+  background: var(--zb-paper);
+  padding: 1.125rem 1.25rem;
+  box-shadow: var(--zb-shadow-soft);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.app-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--zb-line);
+  box-shadow: var(--zb-shadow-card);
+}
+.app-stat-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.625rem;
+}
+.app-stat-card-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--zb-muted);
+}
+.app-stat-card-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: var(--zb-accent-soft);
+  color: var(--zb-accent-deep);
+}
+.app-stat-card-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--zb-ink);
+}
+
+.app-panel {
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 1rem;
+  background: var(--zb-paper);
+  box-shadow: var(--zb-shadow-soft);
+  overflow: hidden;
+}
+.app-panel-head {
+  padding: 1.25rem 1.5rem 0;
+}
+.app-panel-head h2,
+.app-panel-head [data-slot="card-title"] {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.app-panel-body {
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+/* ---------- empty state ---------- */
+.app-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+}
+.app-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.875rem;
+  background: var(--zb-accent-soft);
+  color: var(--zb-accent-deep);
+}
+.app-empty-title {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  color: var(--zb-ink);
+}
+.app-empty-desc {
+  max-width: 24rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--zb-muted);
+}
+
+/* ---------- pipeline chips (dashboard) ---------- */
+.app-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.app-pipeline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 999px;
+  background: var(--zb-bg);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--zb-ink-soft);
+}
+.app-pipeline-chip strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--zb-ink);
+}
+
+/* ---------- tables ---------- */
+.appx [data-slot="table-container"] {
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 0.875rem;
+  overflow: hidden;
+}
+.appx thead [data-slot="table-row"] {
+  background: var(--zb-bg);
+  border-bottom: 1px solid var(--zb-line-soft);
+}
+.appx [data-slot="table-head"] {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--zb-muted);
+}
+.appx tbody [data-slot="table-row"]:hover {
+  background: color-mix(in srgb, var(--zb-bg-deep) 60%, transparent);
+}
+
+/* ---------- settings tabs ---------- */
+.app-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--zb-line-soft);
+  margin-bottom: 0.25rem;
+}
+.app-tab {
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--zb-muted);
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+.app-tab:hover {
+  color: var(--zb-ink);
+}
+.app-tab[aria-current="page"] {
+  border-bottom-color: var(--zb-accent);
+  color: var(--zb-accent-deep);
+  font-weight: 600;
+}
+
+/* ---------- project cards ---------- */
+.app-project-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  .app-project-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .app-project-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.app-project-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 1rem;
+  background: var(--zb-paper);
+  padding: 1.25rem;
+  box-shadow: var(--zb-shadow-soft);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.app-project-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--zb-line);
+  box-shadow: var(--zb-shadow-card);
+}
+.app-project-card-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--zb-ink);
+  text-decoration: none;
+}
+.app-project-card-title:hover {
+  color: var(--zb-accent);
+}
+.app-project-card-meta {
+  display: flex;
+  gap: 1rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  font-size: 0.8125rem;
+  color: var(--zb-muted);
+}
+
+/* ---------- discovery chat ---------- */
+.app-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.app-chat-msg {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+.app-chat-avatar {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  border-radius: 0.5rem;
+  background: var(--zb-bg-deep);
+  color: var(--zb-muted);
+}
+.app-chat-msg.is-agent .app-chat-avatar {
+  background: var(--zb-accent-soft);
+  color: var(--zb-accent-deep);
+}
+.app-chat-bubble {
+  flex: 1;
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--zb-bg);
+  border: 1px solid var(--zb-line-soft);
+}
+.app-chat-msg.is-user .app-chat-bubble {
+  background: var(--zb-paper);
+  border-color: var(--zb-line);
+}
+
+/* ---------- PRD spec sheet (mirrors landing product section) ---------- */
+.app-prd-sheet {
+  position: relative;
+  border: 1px solid var(--zb-line);
+  border-radius: 0.875rem;
+  background: var(--zb-paper);
+  padding: 2rem 2rem 2.25rem;
+  box-shadow: var(--zb-shadow-card);
+}
+.app-prd-tab {
+  position: absolute;
+  top: -0.75rem;
+  left: 1.75rem;
+  border-radius: 0.5rem;
+  background: var(--zb-ink);
+  color: var(--zb-bg);
+  padding: 0.25rem 0.75rem;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.app-prd-section-label {
+  margin-bottom: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--zb-accent);
+}
+.app-prd-section {
+  padding-top: 1.125rem;
+}
+.app-prd-section + .app-prd-section {
+  border-top: 1px solid var(--zb-line-soft);
+  margin-top: 1.125rem;
+}
+.app-prd-list li {
+  position: relative;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--zb-ink-soft);
+}
+.app-prd-list li::before {
+  content: "";
+  position: absolute;
+  left: 0.125rem;
+  top: 0.55em;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--zb-accent);
+  background: var(--zb-accent-tint);
+}
+
+/* ---------- detail layout ---------- */
+.app-detail-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+@media (min-width: 1024px) {
+  .app-detail-grid {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+.app-meta-card [data-slot="card-title"] {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+}
+.app-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+.app-meta-row + .app-meta-row {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--zb-line-soft);
+  margin-top: 0.5rem;
+}
+.app-meta-row span:first-child {
+  color: var(--zb-muted);
+}
+.app-meta-row span:last-child {
+  font-weight: 600;
+  color: var(--zb-ink);
+}
+
+/* ---------- activity feed ---------- */
+.app-activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--zb-line-soft);
+}
+.app-activity-item:last-child {
+  border-bottom: none;
+}
+
+/* ---------- org switcher accent ---------- */
+.appx .app-org-icon {
+  background: var(--zb-accent-soft) !important;
+  color: var(--zb-accent-deep) !important;
+}
+
+/* ---------- code blocks ---------- */
+.app-code {
+  max-height: 18rem;
+  overflow: auto;
+  border-radius: 0.625rem;
+  border: 1px solid var(--zb-line-soft);
+  background: var(--zb-bg);
+  padding: 0.875rem;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--zb-ink-soft);
+}

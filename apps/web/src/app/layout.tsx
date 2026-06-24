@@ -4,6 +4,7 @@ import "./globals.css";
 import "@/styles/landing.css";
 import "@/styles/auth.css";
 import "@/styles/legal.css";
+import "@/styles/app.css";
 import { TRPCReactProvider } from "@/trpc/react";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";

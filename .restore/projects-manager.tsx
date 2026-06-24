@@ -3,13 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FolderKanban, Plus, Trash2, MoreHorizontal } from "lucide-react";
+import { FolderKanban, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { EmptyState } from "@/components/app/empty-state";
-import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoreHorizontal } from "lucide-react";
 import { api } from "@/trpc/react";
 
 export interface ProjectRow {
@@ -95,91 +101,101 @@ export function ProjectsManager({
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Workspace"
-        title="Projects"
-        description="Group feature requests and repositories by product area."
-        actions={
-          <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
-            <Plus className="size-4" />
-            New project
-          </Button>
-        }
-      />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground text-sm">
+            Group feature requests and repositories by product area.
+          </p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+          <Plus className="size-4" />
+          New project
+        </Button>
+      </div>
 
       {projects.length === 0 ? (
-        <div className="app-panel">
-          <EmptyState
-            icon={FolderKanban}
-            title="No projects yet"
-            description="Create your first project to start capturing feature requests."
-            action={
-              <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
-                <Plus className="size-4" />
-                New project
-              </Button>
-            }
-          />
-        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+            <FolderKanban className="text-muted-foreground size-8" />
+            <div className="space-y-1">
+              <p className="font-medium">No projects yet</p>
+              <p className="text-muted-foreground text-sm">
+                Create your first project to start capturing feature requests.
+              </p>
+            </div>
+            <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+              <Plus className="size-4" />
+              New project
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="app-project-grid">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
-            <article key={p.id} className="app-project-card">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 space-y-2">
-                  <Link href={`/projects/${p.id}`} className="app-project-card-title">
-                    {p.name}
-                  </Link>
-                  <Badge variant="outline" className="font-mono">
-                    {p.key}
-                  </Badge>
-                </div>
-                {canManage && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Project actions"
-                        />
-                      }
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        variant="destructive"
-                        className="gap-2"
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Delete "${p.name}"? Its feature requests are kept but unlinked.`,
-                            )
-                          ) {
-                            remove.mutate({ id: p.id });
-                          }
-                        }}
-                        disabled={remove.isPending}
+            <Card key={p.id} className="relative">
+              <CardHeader className="space-y-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 space-y-1.5">
+                    <CardTitle className="truncate">
+                      <Link
+                        href={`/projects/${p.id}`}
+                        className="hover:underline"
                       >
-                        <Trash2 className="size-4" />
-                        Delete project
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        {p.name}
+                      </Link>
+                    </CardTitle>
+                    <Badge variant="outline" className="font-mono">
+                      {p.key}
+                    </Badge>
+                  </div>
+                  {canManage && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Project actions"
+                          />
+                        }
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          variant="destructive"
+                          className="gap-2"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `Delete "${p.name}"? Its feature requests are kept but unlinked.`,
+                              )
+                            ) {
+                              remove.mutate({ id: p.id });
+                            }
+                          }}
+                          disabled={remove.isPending}
+                        >
+                          <Trash2 className="size-4" />
+                          Delete project
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+                {p.description && (
+                  <CardDescription className="line-clamp-2 pt-2">
+                    {p.description}
+                  </CardDescription>
                 )}
-              </div>
-              {p.description && (
-                <p className="text-muted-foreground mt-3 line-clamp-2 text-sm leading-relaxed">
-                  {p.description}
-                </p>
-              )}
-              <div className="app-project-card-meta">
+              </CardHeader>
+              <CardContent className="text-muted-foreground flex gap-4 text-sm">
                 <span>{p.featureRequestCount} requests</span>
                 <span>{p.repositoryCount} repos</span>
-              </div>
-            </article>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

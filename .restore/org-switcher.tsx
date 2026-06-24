@@ -68,7 +68,7 @@ export function OrgSwitcher({
           }
         >
           <span className="flex min-w-0 items-center gap-2">
-            <span className="app-org-icon flex size-6 shrink-0 items-center justify-center rounded">
+            <span className="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded">
               <Building2 className="size-3.5" />
             </span>
             <span className="truncate text-sm font-medium">{active.name}</span>
@@ -85,7 +85,7 @@ export function OrgSwitcher({
               onClick={() => switchTo(org.id)}
               className="gap-2"
             >
-              <span className="app-org-icon flex size-6 shrink-0 items-center justify-center rounded">
+              <span className="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded">
                 <Building2 className="size-3.5" />
               </span>
               <span className="flex min-w-0 flex-col">

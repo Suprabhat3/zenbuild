@@ -65,7 +65,7 @@ export function IntakeKeyCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <KeyRound className="size-4 text-primary" />
+          <KeyRound className="size-4" />
           Intake webhook
         </CardTitle>
         <CardDescription>
@@ -146,7 +146,7 @@ export function IntakeKeyCard({
         {token && (
           <div className="space-y-2">
             <Label>Example request</Label>
-            <pre className="app-code">
+            <pre className="bg-muted/40 overflow-auto rounded-md p-3 text-xs">
               {example}
             </pre>
           </div>

@@ -6,8 +6,6 @@ import { useState } from "react";
 import { Inbox, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { EmptyState } from "@/components/app/empty-state";
-import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -118,38 +116,39 @@ export function FeatureRequestsManager({
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Delivery loop"
-        title="Feature requests"
-        description="The entry point of the delivery loop. Capture requests from any source."
-        actions={
-          <Button onClick={() => setOpen(true)} className="gap-1.5">
-            <Plus className="size-4" />
-            New request
-          </Button>
-        }
-      />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Feature requests
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            The entry point of the delivery loop. Capture requests from any source.
+          </p>
+        </div>
+        <Button onClick={() => setOpen(true)} className="gap-1.5">
+          <Plus className="size-4" />
+          New request
+        </Button>
+      </div>
 
       {requests.length === 0 ? (
-        <div className="app-panel">
-          <EmptyState
-            icon={Inbox}
-            title="No feature requests yet"
-            description={
-              <>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+            <Inbox className="text-muted-foreground size-8" />
+            <div className="space-y-1">
+              <p className="font-medium">No feature requests yet</p>
+              <p className="text-muted-foreground text-sm">
                 Create one here, or send a signed payload to the intake webhook
                 (see Settings → Intake).
-              </>
-            }
-            action={
-              <Button onClick={() => setOpen(true)} className="gap-1.5">
-                <Plus className="size-4" />
-                New request
-              </Button>
-            }
-          />
-        </div>
+              </p>
+            </div>
+            <Button onClick={() => setOpen(true)} className="gap-1.5">
+              <Plus className="size-4" />
+              New request
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="pt-6">
@@ -169,7 +168,7 @@ export function FeatureRequestsManager({
                     <TableCell>
                       <Link
                         href={`/feature-requests/${r.id}`}
-                        className="font-medium hover:text-primary hover:underline"
+                        className="font-medium hover:underline"
                       >
                         {r.title}
                       </Link>
@@ -236,7 +235,7 @@ export function FeatureRequestsManager({
                   placeholder="What does the requester want, and why?"
                   disabled={create.isPending}
                   rows={4}
-                  className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 flex w-full rounded-lg border px-3 py-2 text-sm shadow-xs transition-colors outline-none focus-visible:ring-[3px] disabled:opacity-50"
+                  className="border-input bg-transparent focus-visible:border-ring focus-visible:ring-ring/50 flex w-full rounded-md border px-3 py-2 text-sm shadow-xs transition-colors outline-none focus-visible:ring-[3px] disabled:opacity-50"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">

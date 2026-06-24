@@ -106,6 +106,7 @@ export function DiscoveryPanel({
 
   const lastAgent = [...messages].reverse().find((m) => m.role === "AGENT");
   const decision = lastAgent?.metadata?.decision;
+  const questions = lastAgent?.metadata?.questions ?? [];
   const awaitingAnswer = decision === "ASK";
   const canGeneratePrd =
     !hasPrd &&
@@ -116,7 +117,7 @@ export function DiscoveryPanel({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" />
+          <Sparkles className="size-4" />
           Product discovery
         </CardTitle>
         <CardDescription>
@@ -126,8 +127,8 @@ export function DiscoveryPanel({
       </CardHeader>
       <CardContent className="space-y-4">
         {busy && (
-          <div className="text-muted-foreground flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-sm">
-            <Loader2 className="size-4 animate-spin text-primary" />
+          <div className="text-muted-foreground flex items-center gap-2 text-sm">
+            <Loader2 className="size-4 animate-spin" />
             {run?.step ?? "Working…"}
             {typeof run?.progress === "number" && run.progress > 0 && (
               <span>· {run.progress}%</span>
@@ -137,7 +138,7 @@ export function DiscoveryPanel({
 
         {messages.length === 0 && !busy ? (
           <div className="space-y-3">
-            <p className="text-muted-foreground text-sm leading-relaxed">
+            <p className="text-muted-foreground text-sm">
               No discovery yet. Let the agent analyze this request — it will ask
               follow-up questions, flag it as a possible duplicate, or proceed to
               a PRD.
@@ -152,25 +153,22 @@ export function DiscoveryPanel({
             </Button>
           </div>
         ) : (
-          <ul className="app-chat">
+          <ul className="space-y-3">
             {messages.map((m) => (
-              <li
-                key={m.id}
-                className={`app-chat-msg ${m.role === "AGENT" ? "is-agent" : "is-user"}`}
-              >
-                <span className="app-chat-avatar">
+              <li key={m.id} className="flex gap-2.5 text-sm">
+                <div className="mt-0.5">
                   {m.role === "AGENT" ? (
-                    <Bot className="size-3.5" />
+                    <Bot className="text-muted-foreground size-4" />
                   ) : (
-                    <User className="size-3.5" />
+                    <User className="text-muted-foreground size-4" />
                   )}
-                </span>
-                <div className="app-chat-bubble space-y-1.5">
+                </div>
+                <div className="space-y-1.5">
                   <p className="whitespace-pre-wrap">{m.content}</p>
                   {m.role === "AGENT" &&
                     m.metadata?.decision === "ASK" &&
                     (m.metadata.questions?.length ?? 0) > 0 && (
-                      <ul className="app-prd-list space-y-1">
+                      <ul className="list-disc space-y-1 pl-5">
                         {m.metadata.questions!.map((q, i) => (
                           <li key={i} className="text-muted-foreground">
                             {q}
@@ -208,7 +206,7 @@ export function DiscoveryPanel({
               placeholder="Answer the agent's questions to refine the request…"
               rows={3}
               disabled={busy}
-              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 flex w-full rounded-lg border px-3 py-2 text-sm shadow-xs transition-colors outline-none focus-visible:ring-[3px] disabled:opacity-50"
+              className="border-input bg-transparent focus-visible:border-ring focus-visible:ring-ring/50 flex w-full rounded-md border px-3 py-2 text-sm shadow-xs transition-colors outline-none focus-visible:ring-[3px] disabled:opacity-50"
             />
             <div className="flex flex-wrap justify-end gap-2">
               {canGeneratePrd && (
