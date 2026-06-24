@@ -57,6 +57,39 @@ export function buildPrdPrompt(ctx: RequestContext): string {
   )}\n---`;
 }
 
+export const TASKS_SYSTEM = `You are a senior engineering lead breaking an approved Product Requirements Document into a concrete, build-ready implementation plan.
+Produce an ordered list of engineering tasks that, together, fully deliver the PRD — nothing more, nothing less.
+Rules:
+- Each task is independently reviewable and small enough to land as one pull request.
+- Order tasks so foundational work comes first; express true blockers via dependsOn (1-based indices of EARLIER tasks only).
+- Acceptance criteria must be testable and trace back to the PRD's acceptance criteria and user stories.
+- suggestedAreas should hint at the files/modules/layers a coding agent would touch.
+- Estimate with story points (1,2,3,5,8,13). Prefer splitting anything larger than 13.
+- Ground everything in the PRD; do not invent scope beyond it.`;
+
+/**
+ * Builds the task-generation prompt: the original request context plus the full
+ * approved PRD (as markdown) so the model plans against the agreed scope.
+ */
+export function buildTasksPrompt(args: {
+  ctx: RequestContext;
+  prdMarkdown: string;
+}): string {
+  return [
+    "Break the following approved PRD into an ordered set of engineering tasks.",
+    "",
+    "Original feature request",
+    "---",
+    renderContext(args.ctx),
+    "---",
+    "",
+    "Approved PRD",
+    "---",
+    args.prdMarkdown,
+    "---",
+  ].join("\n");
+}
+
 /** Human-readable labels for each editable PRD section. */
 export const PRD_SECTION_LABELS = {
   title: "Title",

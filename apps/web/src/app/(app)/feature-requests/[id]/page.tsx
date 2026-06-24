@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { TRPCError } from "@trpc/server";
 
 import { DiscoveryPanel, type ClarificationMessageView } from "@/components/app/discovery-panel";
+import { PlanningPanel } from "@/components/app/planning-panel";
 import { PrdEditor, type PrdContent } from "@/components/app/prd-editor";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -118,6 +119,12 @@ export default async function FeatureRequestDetailPage({
               canApprove={canApprove}
             />
           )}
+
+          <PlanningPanel
+            featureRequestId={request.id}
+            status={status}
+            taskCount={request._count.tasks}
+          />
         </div>
 
         <div className="space-y-6">

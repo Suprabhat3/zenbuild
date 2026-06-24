@@ -49,6 +49,51 @@ const UserStory = z.object({
   soThat: z.string().min(1).describe("The value: 'so that <benefit>'"),
 });
 
+export const TaskPriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]);
+export type TaskPriorityEnum = z.infer<typeof TaskPriorityEnum>;
+
+/**
+ * A single engineering task derived from an approved PRD. Dependencies are
+ * expressed as 1-based indices into the generated `tasks` array (a task may only
+ * depend on tasks that appear *before* it, which keeps the plan acyclic). The
+ * persistence layer maps these indices to created task IDs.
+ */
+const GeneratedTask = z.object({
+  title: z.string().min(1).describe("Short, imperative task title."),
+  description: z
+    .string()
+    .min(1)
+    .describe("What to build and why, grounded in the PRD."),
+  acceptanceCriteria: z
+    .array(z.string().min(1))
+    .describe("Testable criteria for this task being done."),
+  priority: TaskPriorityEnum.describe("Relative priority of the task."),
+  estimate: z
+    .number()
+    .int()
+    .min(1)
+    .max(13)
+    .describe("Story-point estimate (Fibonacci-ish: 1,2,3,5,8,13)."),
+  suggestedAreas: z
+    .array(z.string().min(1))
+    .describe("Files, modules, or areas the coding agent should touch."),
+  dependsOn: z
+    .array(z.number().int().min(1))
+    .describe(
+      "1-based indices of earlier tasks this one depends on. Empty if none.",
+    ),
+});
+export type GeneratedTask = z.infer<typeof GeneratedTask>;
+
+export const TasksSchema = z.object({
+  tasks: z
+    .array(GeneratedTask)
+    .min(1)
+    .max(40)
+    .describe("Ordered engineering tasks that fully deliver the PRD."),
+});
+export type TasksResult = z.infer<typeof TasksSchema>;
+
 export const PrdSchema = z.object({
   title: z.string().min(1).describe("Concise PRD title."),
   problemStatement: z

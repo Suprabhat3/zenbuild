@@ -41,7 +41,7 @@ export function PrdView({
         <div className="app-prd-sheet">
           <span className="app-prd-tab">PRD · v{version}</span>
           <div className="flex flex-wrap items-start justify-between gap-3 pt-2">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal tracking-tight">
+            <h2 className="font-(family-name:--font-display) text-2xl font-normal tracking-tight">
               {content.title || "Product requirements"}
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -55,7 +55,7 @@ export function PrdView({
 
           <div className="app-prd-section">
             <h3 className="app-prd-section-label">Problem statement</h3>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--zb-ink-soft)]">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--zb-ink-soft)">
               {content.problemStatement}
             </p>
           </div>

@@ -1,5 +1,10 @@
 import type { PrismaClient, WorkflowType } from "@zenbuild/db";
-import { clarifyRequested, inngest, prdRequested } from "@zenbuild/jobs";
+import {
+  clarifyRequested,
+  inngest,
+  prdRequested,
+  tasksRequested,
+} from "@zenbuild/jobs";
 
 /**
  * Kicks off an async product-discovery workflow: creates a `WorkflowRun` row
@@ -13,7 +18,7 @@ import { clarifyRequested, inngest, prdRequested } from "@zenbuild/jobs";
 async function triggerDiscovery(
   db: PrismaClient,
   args: {
-    type: Extract<WorkflowType, "CLARIFY" | "PRD_GENERATE">;
+    type: Extract<WorkflowType, "CLARIFY" | "PRD_GENERATE" | "TASKS_GENERATE">;
     organizationId: string;
     featureRequestId: string;
     actorId: string;
@@ -31,20 +36,18 @@ async function triggerDiscovery(
     },
   });
 
+  const payload = {
+    featureRequestId,
+    organizationId,
+    workflowRunId: run.id,
+    triggeredBy: actorId,
+  };
   const event =
     type === "CLARIFY"
-      ? clarifyRequested.create({
-          featureRequestId,
-          organizationId,
-          workflowRunId: run.id,
-          triggeredBy: actorId,
-        })
-      : prdRequested.create({
-          featureRequestId,
-          organizationId,
-          workflowRunId: run.id,
-          triggeredBy: actorId,
-        });
+      ? clarifyRequested.create(payload)
+      : type === "PRD_GENERATE"
+        ? prdRequested.create(payload)
+        : tasksRequested.create(payload);
 
   await inngest.send(event);
 
@@ -63,4 +66,11 @@ export function triggerPrdGeneration(
   args: { organizationId: string; featureRequestId: string; actorId: string },
 ) {
   return triggerDiscovery(db, { ...args, type: "PRD_GENERATE" });
+}
+
+export function triggerTaskGeneration(
+  db: PrismaClient,
+  args: { organizationId: string; featureRequestId: string; actorId: string },
+) {
+  return triggerDiscovery(db, { ...args, type: "TASKS_GENERATE" });
 }

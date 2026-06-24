@@ -20,7 +20,7 @@
 | 3 | App Shell, Projects & Feature-Request Intake | ✅ Done |
 | 4 | Product Discovery: Clarification + PRD Generation | ✅ Done |
 | 5 | PRD Editor & Approval | ✅ Done |
-| 6 | Planning: Task Generation + Kanban | ⬜ Not started |
+| 6 | Planning: Task Generation + Kanban | ✅ Done |
 | 7 | GitHub App & Repository Integration | ⬜ Not started |
 | 8 | Coding Agent | ⬜ Not started |
 | 9 | AI Code Review | ⬜ Not started |
@@ -239,6 +239,42 @@ example + rotate). `pnpm -r typecheck` green.
 3. **Plan approval**: `plan.approve` confirms tasks before development.
 
 **Done when:** Approved PRD generates editable tasks on a working Kanban board; plan can be approved to enter development.
+
+> **Status: ✅ Done.**
+> - **`packages/db`**: pure `lexorank` utility (`rankBetween`, `initialRanks`) for
+>   fractional Kanban ordering without renumbering siblings — exported from the package
+>   index and at `@zenbuild/db/lexorank` so both `api` (drag reordering) and `jobs`
+>   (initial task creation) share one implementation.
+> - **`packages/ai`**: `generateTasks` (`src/tasks.ts`) turns an approved PRD + request
+>   context into an ordered, build-ready task list via `generateObject`. New `TasksSchema`
+>   (title, description, acceptance criteria, priority, story-point estimate, suggested
+>   areas, and `dependsOn` as 1-based indices into the list) + `TASKS_SYSTEM` /
+>   `buildTasksPrompt`. Grounded strictly in the PRD.
+> - **`packages/jobs`**: Inngest `feature-tasks-generate` (`feature/tasks.requested`,
+>   `retries: 2`, durable `step.run`s + `WorkflowRun` progress) — loads the **approved**
+>   PRD, generates tasks, and persists a fresh board in a transaction: tasks in the Backlog
+>   column with lexorank ranks, dependency edges (mapping the model's 1-based indices to IDs
+>   with a backward-only/in-range filter that keeps the graph acyclic), `PRD_APPROVED →
+>   TASKS_READY`, audit-logged `tasks.generate`. Re-running regenerates the plan.
+> - **API** (`task` router): `board` (org-scoped: ordered tasks + dependency labels +
+>   assignable members + edit/generate gates); `generate` (async trigger, gated to
+>   PRD_APPROVED/TASKS_READY); `create` / `update` / `remove`; `move` (column + lexorank
+>   reorder from neighbour IDs, with a safe append fallback on stale ranks); `assign`
+>   (validated against org membership); `approvePlan` (**`requireRole("owner","admin")`**,
+>   `TASKS_READY → IN_DEVELOPMENT`, requires ≥1 task, audit-logged `plan.approve`). All
+>   tenant-isolated through the parent feature request; board edits limited to
+>   TASKS_READY/IN_DEVELOPMENT.
+> - **Web**: themed (warm-editorial, not plain shadcn) Kanban at
+>   `/feature-requests/[id]/board` — `@dnd-kit` drag-and-drop with **keyboard support**
+>   (a11y) and optimistic reorder, plus a per-card menu (Move to / Assignee / Edit / Delete)
+>   as a fully keyboard-accessible alternative; create/edit task dialog; assignee avatars;
+>   priority/estimate/dependency chips; board summary (tasks/done/points); role-gated
+>   **Approve plan** and **Regenerate tasks** (live progress). A `PlanningPanel` on the
+>   detail page triggers generation (live progress) and links to the board. New CSS in
+>   `styles/app.css` (`app-board`, `app-col`, `app-task-card`, …) using the `--zb-*` palette.
+> - **Verified**: `pnpm -r typecheck` green across all 9 packages; env-free smoke (lexorank
+>   ordering/midpoints, `TasksSchema` validation, dependency-edge acyclic mapping) 14/14.
+>   Live task generation requires `OPENAI_API_KEY` + the Inngest dev server.
 
 ---
 

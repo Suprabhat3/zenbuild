@@ -632,6 +632,218 @@
   color: var(--zb-accent-deep) !important;
 }
 
+/* ============================================================
+   Planning — Kanban board (Phase 6)
+   Editorial paper columns + cards, rose/sage/gold accents.
+   ============================================================ */
+.app-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(15rem, 1fr);
+  gap: 1rem;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+}
+@media (max-width: 900px) {
+  .app-board {
+    grid-auto-columns: 80%;
+  }
+}
+
+.app-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 8rem;
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 1rem;
+  background: var(--zb-bg-deep);
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.app-col.is-over {
+  border-color: var(--zb-accent);
+  background: color-mix(in srgb, var(--zb-accent-soft) 55%, var(--zb-bg-deep));
+  box-shadow: inset 0 0 0 1px var(--zb-accent-soft);
+}
+.app-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 0.875rem 0.5rem;
+}
+.app-col-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--zb-ink-soft);
+}
+.app-col-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--zb-muted);
+}
+.app-col-dot.col-backlog {
+  background: #b9ac93;
+}
+.app-col-dot.col-todo {
+  background: var(--zb-gold);
+}
+.app-col-dot.col-in_progress {
+  background: var(--zb-accent);
+}
+.app-col-dot.col-in_review {
+  background: #7c93c4;
+}
+.app-col-dot.col-done {
+  background: var(--zb-sage);
+}
+.app-col-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--zb-paper);
+  border: 1px solid var(--zb-line-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--zb-muted);
+}
+.app-col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.25rem 0.625rem 0.75rem;
+  flex: 1;
+}
+.app-col-empty {
+  margin: 0.25rem 0.25rem 0.5rem;
+  padding: 1rem 0.75rem;
+  border: 1px dashed var(--zb-line);
+  border-radius: 0.75rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--zb-muted);
+}
+
+/* ---------- task card ---------- */
+.app-task-card {
+  position: relative;
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 0.875rem;
+  background: var(--zb-paper);
+  padding: 0.75rem 0.875rem;
+  box-shadow: var(--zb-shadow-soft);
+  cursor: grab;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.app-task-card:hover {
+  border-color: var(--zb-line);
+  box-shadow: var(--zb-shadow-card);
+}
+.app-task-card:focus-visible {
+  outline: 2px solid var(--zb-accent);
+  outline-offset: 2px;
+}
+.app-task-card.is-dragging {
+  cursor: grabbing;
+  opacity: 0.5;
+}
+.app-task-card.is-overlay {
+  cursor: grabbing;
+  box-shadow: var(--zb-shadow-card);
+  transform: rotate(1.5deg);
+}
+.app-task-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.app-task-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--zb-ink);
+}
+.app-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+}
+.app-task-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--zb-line-soft);
+  background: var(--zb-bg);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--zb-ink-soft);
+}
+.app-task-prio {
+  border: none;
+}
+.app-task-prio.prio-low {
+  background: #eef1ea;
+  color: #5d6b4f;
+}
+.app-task-prio.prio-medium {
+  background: #eef0f6;
+  color: #4a5a86;
+}
+.app-task-prio.prio-high {
+  background: #f7ecd8;
+  color: #8a5f1e;
+}
+.app-task-prio.prio-urgent {
+  background: var(--zb-accent-soft);
+  color: var(--zb-accent-deep);
+}
+.app-task-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--zb-accent-soft);
+  color: var(--zb-accent-deep);
+  font-size: 0.625rem;
+  font-weight: 700;
+  overflow: hidden;
+}
+.app-task-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.app-task-dep {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--zb-muted);
+}
+
+/* ---------- board summary stats ---------- */
+.app-board-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
 /* ---------- code blocks ---------- */
 .app-code {
   max-height: 18rem;

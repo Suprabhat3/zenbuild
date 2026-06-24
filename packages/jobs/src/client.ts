@@ -21,11 +21,13 @@ const discoveryData = z.object({
 
 export const CLARIFY_EVENT = "feature/clarify.requested";
 export const PRD_EVENT = "feature/prd.requested";
+export const TASKS_EVENT = "feature/tasks.requested";
 
 export const clarifyRequested = eventType(CLARIFY_EVENT, {
   schema: discoveryData,
 });
 export const prdRequested = eventType(PRD_EVENT, { schema: discoveryData });
+export const tasksRequested = eventType(TASKS_EVENT, { schema: discoveryData });
 
 export type DiscoveryEventData = z.infer<typeof discoveryData>;
 

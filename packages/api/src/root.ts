@@ -8,6 +8,7 @@ import { memberRouter } from "./routers/member";
 import { onboardingRouter } from "./routers/onboarding";
 import { prdRouter } from "./routers/prd";
 import { projectRouter } from "./routers/project";
+import { taskRouter } from "./routers/task";
 import { viewerRouter } from "./routers/viewer";
 import { workflowRunRouter } from "./routers/workflowRun";
 import { createTRPCRouter, publicProcedure } from "./trpc";
@@ -38,6 +39,7 @@ export const appRouter = createTRPCRouter({
   dashboard: dashboardRouter,
   clarification: clarificationRouter,
   prd: prdRouter,
+  task: taskRouter,
   workflowRun: workflowRunRouter,
 });
 

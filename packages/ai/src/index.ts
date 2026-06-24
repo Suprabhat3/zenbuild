@@ -7,6 +7,7 @@ export {
   type PrdSectionKey,
   type PrdSectionResult,
 } from "./section";
+export { generateTasks, type TasksGenResult } from "./tasks";
 export { renderPrdMarkdown } from "./markdown";
 export { MODELS } from "./model";
 export { PRD_SECTION_LABELS } from "./prompts";
@@ -15,6 +16,10 @@ export {
   ClarificationSchema,
   ClarificationDecision,
   PrdSchema,
+  TasksSchema,
+  TaskPriorityEnum,
   type Clarification,
   type Prd,
+  type GeneratedTask,
+  type TasksResult,
 } from "./schemas";
