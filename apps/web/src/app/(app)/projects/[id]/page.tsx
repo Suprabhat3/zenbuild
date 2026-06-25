@@ -5,6 +5,7 @@ import { ArrowLeft, Inbox, GitBranch } from "lucide-react";
 import { TRPCError } from "@trpc/server";
 
 import { PageHeader } from "@/components/app/page-header";
+import { RepoConnectCard } from "@/components/app/repo-connect-card";
 import { StatCard } from "@/components/app/stat-card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,7 +39,12 @@ export default async function ProjectDetailPage({
     throw error;
   }
 
-  const requests = await api.featureRequest.list({ projectId: id });
+  const [requests, repos, org] = await Promise.all([
+    api.featureRequest.list({ projectId: id }),
+    api.github.repositories({ projectId: id }),
+    api.viewer.activeOrganization(),
+  ]);
+  const canManageRepos = org.role === "owner" || org.role === "admin";
 
   return (
     <div className="space-y-8">
@@ -72,6 +78,12 @@ export default async function ProjectDetailPage({
           icon={GitBranch}
         />
       </div>
+
+      <RepoConnectCard
+        projectId={id}
+        initialRepos={repos}
+        canManage={canManageRepos}
+      />
 
       <Card>
         <CardHeader>

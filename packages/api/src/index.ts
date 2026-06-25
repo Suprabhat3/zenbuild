@@ -13,3 +13,10 @@ export {
   INTAKE_TOKEN_HEADER,
   INTAKE_SIGNATURE_HEADER,
 } from "./lib/intakeWebhook";
+export {
+  handleGithubWebhook,
+  GITHUB_EVENT_HEADER,
+  GITHUB_SIGNATURE_HEADER,
+  GITHUB_DELIVERY_HEADER,
+} from "./lib/githubWebhook";
+export { completeGithubInstallation } from "./lib/githubInstall";

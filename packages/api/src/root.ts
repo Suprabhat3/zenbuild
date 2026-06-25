@@ -3,6 +3,7 @@ import { z } from "zod";
 import { clarificationRouter } from "./routers/clarification";
 import { dashboardRouter } from "./routers/dashboard";
 import { featureRequestRouter } from "./routers/featureRequest";
+import { githubRouter } from "./routers/github";
 import { intakeKeyRouter } from "./routers/intakeKey";
 import { memberRouter } from "./routers/member";
 import { onboardingRouter } from "./routers/onboarding";
@@ -40,6 +41,7 @@ export const appRouter = createTRPCRouter({
   clarification: clarificationRouter,
   prd: prdRouter,
   task: taskRouter,
+  github: githubRouter,
   workflowRun: workflowRunRouter,
 });
 

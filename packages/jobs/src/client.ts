@@ -31,6 +31,49 @@ export const tasksRequested = eventType(TASKS_EVENT, { schema: discoveryData });
 
 export type DiscoveryEventData = z.infer<typeof discoveryData>;
 
+// --- GitHub integration events (Phase 7) ------------------------------------
+
+/** Sync a single PR from GitHub into ZenBuild (open/synchronize/close/etc). */
+const prSyncData = z.object({
+  organizationId: z.string(),
+  repositoryId: z.string(),
+  prNumber: z.number().int(),
+  /** GitHub webhook action, for observability ("opened" | "synchronize" | …). */
+  reason: z.string().optional(),
+});
+
+/** Backfill all currently-open PRs for a freshly connected repository. */
+const repoBackfillData = z.object({
+  organizationId: z.string(),
+  repositoryId: z.string(),
+});
+
+/** React to an installation lifecycle change (e.g. the App being uninstalled). */
+const installationSyncData = z.object({
+  installationId: z.number().int(),
+  action: z.string(),
+});
+
+export const GITHUB_PR_SYNC_EVENT = "github/pr.sync";
+export const GITHUB_REPO_BACKFILL_EVENT = "github/repo.backfill";
+export const GITHUB_INSTALLATION_SYNC_EVENT = "github/installation.sync";
+
+export const githubPrSyncRequested = eventType(GITHUB_PR_SYNC_EVENT, {
+  schema: prSyncData,
+});
+export const githubRepoBackfillRequested = eventType(
+  GITHUB_REPO_BACKFILL_EVENT,
+  { schema: repoBackfillData },
+);
+export const githubInstallationSyncRequested = eventType(
+  GITHUB_INSTALLATION_SYNC_EVENT,
+  { schema: installationSyncData },
+);
+
+export type GithubPrSyncData = z.infer<typeof prSyncData>;
+export type GithubRepoBackfillData = z.infer<typeof repoBackfillData>;
+export type GithubInstallationSyncData = z.infer<typeof installationSyncData>;
+
 export const inngest = new Inngest({
   id: "zenbuild",
   eventKey: serverEnv.INNGEST_EVENT_KEY,

@@ -7,11 +7,17 @@ import { createTRPCReact } from "@trpc/react-query";
 import { useState } from "react";
 import superjson from "superjson";
 
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+
 import type { AppRouter } from "@zenbuild/api";
 
 import { createQueryClient } from "./query-client";
 
 export const api = createTRPCReact<AppRouter>();
+
+/** Inferred input/output types for every procedure, e.g. RouterOutputs["github"]["repositories"]. */
+export type RouterInputs = inferRouterInputs<AppRouter>;
+export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
 let clientSingleton: QueryClient | undefined;
 function getQueryClient() {

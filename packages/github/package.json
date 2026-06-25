@@ -1,11 +1,10 @@
 {
-  "name": "@zenbuild/api",
+  "name": "@zenbuild/github",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./client": "./src/client.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -13,18 +12,12 @@
     "clean": "rimraf .turbo node_modules"
   },
   "dependencies": {
-    "@trpc/server": "^11.18.0",
-    "@zenbuild/ai": "workspace:*",
-    "@zenbuild/db": "workspace:*",
-    "@zenbuild/email": "workspace:*",
+    "@octokit/auth-app": "^8.2.0",
+    "@octokit/webhooks-methods": "^6.0.0",
     "@zenbuild/env": "workspace:*",
-    "@zenbuild/github": "workspace:*",
-    "@zenbuild/jobs": "workspace:*",
-    "superjson": "^2.2.6",
-    "zod": "^4.4.3"
+    "octokit": "^5.0.5"
   },
   "devDependencies": {
-    "@trpc/client": "^11.18.0",
     "@types/node": "^26.0.0",
     "@zenbuild/tsconfig": "workspace:*",
     "rimraf": "^6.1.3",

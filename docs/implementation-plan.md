@@ -21,7 +21,7 @@
 | 4 | Product Discovery: Clarification + PRD Generation | ✅ Done |
 | 5 | PRD Editor & Approval | ✅ Done |
 | 6 | Planning: Task Generation + Kanban | ✅ Done |
-| 7 | GitHub App & Repository Integration | ⬜ Not started |
+| 7 | GitHub App & Repository Integration | ✅ Done |
 | 8 | Coding Agent | ⬜ Not started |
 | 9 | AI Code Review | ⬜ Not started |
 | 10 | Fix Loop & Re-Review | ⬜ Not started |
@@ -288,6 +288,40 @@ example + rotate). `pnpm -r typecheck` green.
 4. **PR ingestion**: on PR open/sync, create/update `PullRequest` (number, head/base, author, status), fetch **changed files + diff** via Octokit, link PR to the originating feature request when detectable (branch naming / PR body tag).
 
 **Done when:** App installs on a real repo, connected repos list from GitHub, opening a PR creates a tracked `PullRequest` with real changed files/diffs — all from live data.
+
+> **Status: ✅ Done.**
+>
+> - **`packages/github`** (new): single shared GitHub App (vendor-created; orgs install it).
+>   `app.ts` reads `GITHUB_APP_*` env and exposes app-JWT + per-installation Octokit
+>   factories (the `App` class caches installation tokens); everything degrades gracefully
+>   via `isGithubConfigured()`/`assertGithubConfigured()` so the app boots unconfigured.
+>   `state.ts` signs/verifies a tamper-proof install-state token (HMAC-SHA256, 10-min TTL);
+>   `install.ts` builds the install URL; `webhook.ts` verifies `X-Hub-Signature-256` over the
+>   raw body; `client.ts` lists installation repos and fetches a PR's changed files + unified
+>   diff (truncated for huge PRs); `linking.ts` builds/parses the `zenbuild/<fr>/<task>` branch
+>   and `<!-- zenbuild fr=… task=… -->` body marker.
+> - **Install flow**: `github.installUrl` (owner/admin) → GitHub install screen with signed
+>   `state` → `GET /api/github/callback` verifies state + re-checks membership + verifies the
+>   `installation_id` against the API, then upserts `GithubInstallation` (audit-logged).
+> - **Connect**: `github.status` / `listAvailableRepos` (live, minus already-connected) /
+>   `connect` (owner/admin; re-verifies repo access, then backfills open PRs) / `disconnect` /
+>   `repositories`. All org-scoped.
+> - **Webhook** `POST /api/github/webhook`: verifies signature, resolves org/repo from the
+>   installation id, and emits Inngest events — `pull_request` → `github/pr.sync`; `push` →
+>   re-syncs open PRs on the branch; `installation` deleted → `github/installation.sync` cleanup;
+>   `pull_request_review`/others acknowledged for later phases. Fast 200, heavy work async.
+> - **Inngest** (`packages/jobs`): `github-pr-sync` (fetch PR + files + diff, link to the
+>   feature request/task only when the parsed IDs belong to the repo's org, set AGENT/EXTERNAL
+>   origin, upsert by `(repo, number)`), `github-repo-backfill` (fan out `pr.sync` for every
+>   open PR on connect), `github-installation-sync` (drop the installation on uninstall).
+> - **UI** (themed, warm editorial): Settings → **Integrations** page (`GithubIntegrationCard`)
+>   for the org-level install + installation list; project detail page **Repositories** card
+>   (`RepoConnectCard`) to connect/disconnect repos and see per-repo PR counts. Added a
+>   `RouterOutputs` helper in `trpc/react` for end-to-end-typed props.
+> - **Verified**: `pnpm -r typecheck` green across all 10 packages; env-free smoke (ref
+>   parsing/builders/round-trip, push-ref extraction, signed-state sign/verify incl. expiry +
+>   tamper rejection) 20/20. Live operations require the `GITHUB_APP_*` env + a real GitHub App;
+>   webhooks require the public webhook URL configured on the App.
 
 ---
 
