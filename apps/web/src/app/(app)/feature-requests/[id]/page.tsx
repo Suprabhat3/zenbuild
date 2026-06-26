@@ -6,6 +6,7 @@ import { TRPCError } from "@trpc/server";
 
 import { DiscoveryPanel, type ClarificationMessageView } from "@/components/app/discovery-panel";
 import { PlanningPanel } from "@/components/app/planning-panel";
+import { ReviewPanel } from "@/components/app/review-panel";
 import { PrdEditor, type PrdContent } from "@/components/app/prd-editor";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -125,6 +126,8 @@ export default async function FeatureRequestDetailPage({
             status={status}
             taskCount={request._count.tasks}
           />
+
+          <ReviewPanel featureRequestId={request.id} status={status} />
         </div>
 
         <div className="space-y-6">

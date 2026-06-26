@@ -9,6 +9,7 @@ import {
 import { githubRepoBackfillRequested, inngest } from "@zenbuild/jobs";
 import { z } from "zod";
 
+import { triggerRepoAnalyze } from "../lib/coding";
 import { createTRPCRouter, orgProcedure, requireRole } from "../trpc";
 
 /**
@@ -128,6 +129,7 @@ export const githubRouter = createTRPCRouter({
         private: r.private,
         url: `https://github.com/${r.fullName}`,
         connected: r.installationId !== null,
+        analyzedAt: r.analyzedAt,
         project: r.project,
         pullRequestCount: r._count.pullRequests,
         createdAt: r.createdAt,
@@ -240,6 +242,14 @@ export const githubRouter = createTRPCRouter({
           repositoryId: repository.id,
         }),
       );
+
+      // Analyze the repo up front so the coding agent (Phase 8) has grounding
+      // context ready before the first task is implemented.
+      await triggerRepoAnalyze(ctx.db, {
+        organizationId: ctx.organizationId,
+        repositoryId: repository.id,
+        actorId: ctx.user.id,
+      });
 
       return { id: repository.id, fullName: match.fullName };
     }),

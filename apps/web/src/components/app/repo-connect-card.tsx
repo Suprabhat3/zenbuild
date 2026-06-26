@@ -11,6 +11,7 @@ import {
   Loader2,
   Lock,
   Plus,
+  ScanSearch,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -66,6 +67,13 @@ export function RepoConnectCard({
       toast.success("Repository disconnected.");
       void utils.github.repositories.invalidate({ projectId });
       router.refresh();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const analyze = api.coding.analyzeRepo.useMutation({
+    onSuccess: () => {
+      toast.success("Analyzing repository — grounding the coding agent.");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -135,30 +143,54 @@ export function RepoConnectCard({
                         Private
                       </span>
                     )}
+                    <span
+                      className="inline-flex items-center gap-1"
+                      title="Repository analysis grounds the AI coding agent."
+                    >
+                      <ScanSearch className="size-3" />
+                      {repo.analyzedAt ? "Analyzed" : "Analysis pending"}
+                    </span>
                     {!repo.connected && (
                       <span className="text-destructive">Installation removed</span>
                     )}
                   </div>
                 </div>
                 {canManage && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Disconnect ${repo.fullName}`}
-                    className="text-muted-foreground hover:text-destructive"
-                    disabled={disconnect.isPending}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Disconnect ${repo.fullName}? Tracked PRs for this repo will be removed.`,
-                        )
-                      ) {
-                        disconnect.mutate({ repositoryId: repo.id });
-                      }
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Re-analyze ${repo.fullName}`}
+                      title="Re-analyze repository"
+                      className="text-muted-foreground hover:text-foreground"
+                      disabled={analyze.isPending || !repo.connected}
+                      onClick={() => analyze.mutate({ repositoryId: repo.id })}
+                    >
+                      {analyze.isPending && analyze.variables?.repositoryId === repo.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <ScanSearch className="size-4" />
+                      )}
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Disconnect ${repo.fullName}`}
+                      className="text-muted-foreground hover:text-destructive"
+                      disabled={disconnect.isPending}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Disconnect ${repo.fullName}? Tracked PRs for this repo will be removed.`,
+                          )
+                        ) {
+                          disconnect.mutate({ repositoryId: repo.id });
+                        }
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 )}
               </li>
             ))}

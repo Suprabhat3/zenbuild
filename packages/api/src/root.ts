@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { clarificationRouter } from "./routers/clarification";
+import { codingRouter } from "./routers/coding";
 import { dashboardRouter } from "./routers/dashboard";
 import { featureRequestRouter } from "./routers/featureRequest";
 import { githubRouter } from "./routers/github";
@@ -9,6 +10,7 @@ import { memberRouter } from "./routers/member";
 import { onboardingRouter } from "./routers/onboarding";
 import { prdRouter } from "./routers/prd";
 import { projectRouter } from "./routers/project";
+import { reviewRouter } from "./routers/review";
 import { taskRouter } from "./routers/task";
 import { viewerRouter } from "./routers/viewer";
 import { workflowRunRouter } from "./routers/workflowRun";
@@ -42,6 +44,8 @@ export const appRouter = createTRPCRouter({
   prd: prdRouter,
   task: taskRouter,
   github: githubRouter,
+  coding: codingRouter,
+  review: reviewRouter,
   workflowRun: workflowRunRouter,
 });
 

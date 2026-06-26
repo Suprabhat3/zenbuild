@@ -29,6 +29,18 @@ export function discoveryModel(model: string = DEFAULT_MODEL): LanguageModel {
   return getProvider()(model);
 }
 
+/**
+ * The model used by the coding agents (repo analysis + code generation). Kept
+ * separate from `discoveryModel` so the coding tier can be tuned independently
+ * of product-discovery without touching call sites.
+ */
+export function codingModel(model: string = CODING_MODEL): LanguageModel {
+  return getProvider()(model);
+}
+
+const CODING_MODEL = "gpt-5.4";
+
 export const MODELS = {
   discovery: DEFAULT_MODEL,
+  coding: CODING_MODEL,
 } as const;

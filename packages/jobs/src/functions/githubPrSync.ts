@@ -7,6 +7,7 @@ import {
 import type { InngestFunction } from "inngest";
 
 import { githubPrSyncRequested, inngest } from "../client";
+import { enqueuePrReview, shouldAutoReviewAfterSync } from "../triggerReview";
 
 /**
  * `github/pr.sync` → fetch a PR (with changed files + unified diff) live from
@@ -53,7 +54,7 @@ export const githubPrSyncFn: InngestFunction.Any = inngest.createFunction(
       ),
     );
 
-    await step.run("upsert-pull-request", async () => {
+    const upserted = await step.run("upsert-pull-request", async () => {
       // Resolve + validate the originating feature request / task.
       const ref = parseZenbuildRef(pull.body, pull.headRef);
       let featureRequestId: string | null = null;
@@ -110,6 +111,51 @@ export const githubPrSyncFn: InngestFunction.Any = inngest.createFunction(
         // `origin` is set on first ingest and not flipped on later syncs.
         update: data,
       });
+
+      return {
+        featureRequestId,
+        headSha: pull.headSha,
+        status: pull.status,
+      };
+    });
+
+    await step.run("maybe-trigger-review", async () => {
+      if (upserted.status !== "OPEN" || !upserted.featureRequestId) {
+        return { skipped: true, reason: "not-open-or-unlinked" };
+      }
+
+      const fr = await db.featureRequest.findFirst({
+        where: { id: upserted.featureRequestId, organizationId },
+        select: { id: true, status: true },
+      });
+      if (!fr) return { skipped: true, reason: "feature-not-found" };
+
+      const tracked = await db.pullRequest.findFirst({
+        where: { repositoryId, number: pull.number },
+        select: { id: true },
+      });
+      if (!tracked) return { skipped: true, reason: "pr-not-tracked" };
+
+      const decision = await shouldAutoReviewAfterSync({
+        organizationId,
+        pullRequestId: tracked.id,
+        headSha: upserted.headSha,
+        featureRequestId: fr.id,
+        featureStatus: fr.status,
+        reason: event.data.reason,
+      });
+      if (!decision.enqueue) {
+        return { skipped: true, reason: decision.skipReason };
+      }
+
+      const run = await enqueuePrReview({
+        organizationId,
+        pullRequestId: tracked.id,
+        featureRequestId: fr.id,
+        headSha: upserted.headSha,
+        triggeredBy: "webhook",
+      });
+      return { skipped: false, workflowRunId: run.id };
     });
 
     return { ok: true, number: pull.number, status: pull.status };

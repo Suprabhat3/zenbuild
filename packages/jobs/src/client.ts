@@ -54,6 +54,41 @@ const installationSyncData = z.object({
   action: z.string(),
 });
 
+// --- Coding agent events (Phase 8) ------------------------------------------
+
+/** Analyze a connected repository into a durable RepoContext (repo.analyze). */
+const repoAnalyzeData = z.object({
+  organizationId: z.string(),
+  repositoryId: z.string(),
+  workflowRunId: z.string(),
+  /** Feature request that prompted the analysis (for run association), if any. */
+  featureRequestId: z.string().optional(),
+  triggeredBy: z.string().optional(),
+});
+
+/** Implement a single task → branch + commit + PR (task.implement). */
+const taskImplementData = z.object({
+  organizationId: z.string(),
+  featureRequestId: z.string(),
+  taskId: z.string(),
+  repositoryId: z.string(),
+  workflowRunId: z.string(),
+  triggeredBy: z.string().optional(),
+});
+
+export const REPO_ANALYZE_EVENT = "coding/repo.analyze";
+export const TASK_IMPLEMENT_EVENT = "coding/task.implement";
+
+export const repoAnalyzeRequested = eventType(REPO_ANALYZE_EVENT, {
+  schema: repoAnalyzeData,
+});
+export const taskImplementRequested = eventType(TASK_IMPLEMENT_EVENT, {
+  schema: taskImplementData,
+});
+
+export type RepoAnalyzeData = z.infer<typeof repoAnalyzeData>;
+export type TaskImplementData = z.infer<typeof taskImplementData>;
+
 export const GITHUB_PR_SYNC_EVENT = "github/pr.sync";
 export const GITHUB_REPO_BACKFILL_EVENT = "github/repo.backfill";
 export const GITHUB_INSTALLATION_SYNC_EVENT = "github/installation.sync";
@@ -73,6 +108,26 @@ export const githubInstallationSyncRequested = eventType(
 export type GithubPrSyncData = z.infer<typeof prSyncData>;
 export type GithubRepoBackfillData = z.infer<typeof repoBackfillData>;
 export type GithubInstallationSyncData = z.infer<typeof installationSyncData>;
+
+// --- AI code review events (Phase 9) ----------------------------------------
+
+/** Run the QA agent against a tracked pull request (pr.review). */
+const prReviewData = z.object({
+  organizationId: z.string(),
+  pullRequestId: z.string(),
+  featureRequestId: z.string(),
+  workflowRunId: z.string(),
+  /** "webhook" | userId */
+  triggeredBy: z.string().optional(),
+});
+
+export const PR_REVIEW_EVENT = "review/pr.requested";
+
+export const prReviewRequested = eventType(PR_REVIEW_EVENT, {
+  schema: prReviewData,
+});
+
+export type PrReviewData = z.infer<typeof prReviewData>;
 
 export const inngest = new Inngest({
   id: "zenbuild",

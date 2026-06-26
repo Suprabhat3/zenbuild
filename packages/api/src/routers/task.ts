@@ -13,6 +13,8 @@ const taskPrioritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]);
 const GENERATABLE = ["PRD_APPROVED", "TASKS_READY"] as const;
 /** States in which the board may be edited (planning + active development). */
 const BOARD_EDITABLE = ["TASKS_READY", "IN_DEVELOPMENT"] as const;
+/** States from which the coding agent may implement a task (post plan-approval). */
+const IMPLEMENTABLE = ["IN_DEVELOPMENT", "IN_REVIEW", "FIX_NEEDED"] as const;
 
 /** Coerces a Prisma `Json` column we control into a clean string[]. */
 function toStringArray(value: unknown): string[] {
@@ -105,6 +107,11 @@ export const taskRouter = createTRPCRouter({
             assigneeId: true,
             createdAt: true,
             dependsOn: { select: { dependencyId: true } },
+            pullRequests: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { number: true, url: true, status: true, origin: true },
+            },
           },
         }),
         ctx.db.member.findMany({
@@ -126,6 +133,9 @@ export const taskRouter = createTRPCRouter({
         ),
         canGenerate: GENERATABLE.includes(
           fr.status as (typeof GENERATABLE)[number],
+        ),
+        canImplement: IMPLEMENTABLE.includes(
+          fr.status as (typeof IMPLEMENTABLE)[number],
         ),
         members: members.map((m) => ({
           id: m.user.id,
@@ -151,6 +161,14 @@ export const taskRouter = createTRPCRouter({
               title: titleById.get(d.dependencyId) ?? "(unknown)",
             }))
             .filter((d) => titleById.has(d.id)),
+          pr: t.pullRequests[0]
+            ? {
+                number: t.pullRequests[0].number,
+                url: t.pullRequests[0].url,
+                status: t.pullRequests[0].status,
+                origin: t.pullRequests[0].origin,
+              }
+            : null,
         })),
       };
     }),

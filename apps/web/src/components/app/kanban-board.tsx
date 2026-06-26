@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -24,9 +25,11 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Check,
   GitBranch,
+  GitPullRequest,
   Loader2,
   MoreHorizontal,
   Plus,
+  ShieldAlert,
   Sparkles,
   Trash2,
   UserRound,
@@ -89,11 +92,18 @@ interface BoardTask {
   assigneeId: string | null;
   createdAt: Date;
   dependsOn: { id: string; title: string }[];
+  pr: {
+    number: number;
+    url: string;
+    status: "OPEN" | "CLOSED" | "MERGED" | "DRAFT";
+    origin: "AGENT" | "EXTERNAL";
+  } | null;
 }
 interface BoardData {
   status: FeatureRequestStatus;
   canEdit: boolean;
   canGenerate: boolean;
+  canImplement: boolean;
   members: BoardMember[];
   tasks: BoardTask[];
 }
@@ -142,6 +152,7 @@ export function KanbanBoard({
   const [tasks, setTasks] = useState<BoardTask[]>(board.tasks);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editing, setEditing] = useState<BoardTask | null>(null);
+  const [implementing, setImplementing] = useState<BoardTask | null>(null);
   const [creatingIn, setCreatingIn] = useState<TaskStatus | null>(null);
 
   useEffect(() => {
@@ -271,9 +282,11 @@ export function KanbanBoard({
               col={col}
               tasks={columns[col.status]}
               canEdit={canEdit}
+              canImplement={board.canImplement}
               memberById={memberById}
               onAdd={() => setCreatingIn(col.status)}
               onEdit={setEditing}
+              onImplement={setImplementing}
               members={board.members}
               featureRequestId={featureRequestId}
               activeId={activeId}
@@ -318,6 +331,17 @@ export function KanbanBoard({
           }}
         />
       )}
+      {implementing && (
+        <ImplementDialog
+          featureRequestId={featureRequestId}
+          task={implementing}
+          onClose={() => setImplementing(null)}
+          onSettled={() => {
+            void utils.task.board.invalidate({ featureRequestId });
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -334,21 +358,25 @@ function Column({
   col,
   tasks,
   canEdit,
+  canImplement,
   memberById,
   members,
   featureRequestId,
   onAdd,
   onEdit,
+  onImplement,
   activeId,
 }: {
   col: { status: TaskStatus; label: string; dot: string };
   tasks: BoardTask[];
   canEdit: boolean;
+  canImplement: boolean;
   memberById: Map<string, BoardMember>;
   members: BoardMember[];
   featureRequestId: string;
   onAdd: () => void;
   onEdit: (t: BoardTask) => void;
+  onImplement: (t: BoardTask) => void;
   activeId: string | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `col-${col.status}` });
@@ -375,10 +403,12 @@ function Column({
               key={t.id}
               task={t}
               canEdit={canEdit}
+              canImplement={canImplement}
               assignee={t.assigneeId ? memberById.get(t.assigneeId) ?? null : null}
               members={members}
               featureRequestId={featureRequestId}
               onEdit={() => onEdit(t)}
+              onImplement={() => onImplement(t)}
               dragging={activeId === t.id}
             />
           ))}
@@ -406,18 +436,22 @@ function Column({
 function SortableCard({
   task,
   canEdit,
+  canImplement,
   assignee,
   members,
   featureRequestId,
   onEdit,
+  onImplement,
   dragging,
 }: {
   task: BoardTask;
   canEdit: boolean;
+  canImplement: boolean;
   assignee: BoardMember | null;
   members: BoardMember[];
   featureRequestId: string;
   onEdit: () => void;
+  onImplement: () => void;
   dragging: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
@@ -437,12 +471,15 @@ function SortableCard({
         dragging={dragging}
         dragProps={canEdit ? { ...attributes, ...listeners } : undefined}
         actions={
-          canEdit ? (
+          canEdit || canImplement ? (
             <CardMenu
               task={task}
               members={members}
               featureRequestId={featureRequestId}
+              canEdit={canEdit}
+              canImplement={canImplement}
               onEdit={onEdit}
+              onImplement={onImplement}
             />
           ) : null
         }
@@ -492,6 +529,18 @@ function TaskCardView({
             {task.dependsOn.length}
           </span>
         )}
+        {task.pr && (
+          <Link
+            href={task.pr.url}
+            target="_blank"
+            rel="noreferrer"
+            className="app-task-chip gap-1 hover:underline"
+            title={`Pull request #${task.pr.number} (${task.pr.status.toLowerCase()})`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GitPullRequest className="size-3" />#{task.pr.number}
+          </Link>
+        )}
         {assignee && (
           <span className="app-task-avatar ml-auto" title={assignee.name ?? assignee.email}>
             {assignee.image ? (
@@ -514,12 +563,18 @@ function CardMenu({
   task,
   members,
   featureRequestId,
+  canEdit,
+  canImplement,
   onEdit,
+  onImplement,
 }: {
   task: BoardTask;
   members: BoardMember[];
   featureRequestId: string;
+  canEdit: boolean;
+  canImplement: boolean;
   onEdit: () => void;
+  onImplement: () => void;
 }) {
   const utils = api.useUtils();
   const invalidate = () => void utils.task.board.invalidate({ featureRequestId });
@@ -548,60 +603,74 @@ function CardMenu({
       >
         <MoreHorizontal className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={onEdit}>Edit details</DropdownMenuItem>
+      <DropdownMenuContent align="end" className="w-52">
+        {canImplement && (
+          <>
+            <DropdownMenuItem onClick={onImplement}>
+              <Sparkles className="size-4" />
+              {task.pr ? "Re-implement with AI" : "Implement with AI"}
+            </DropdownMenuItem>
+            {canEdit && <DropdownMenuSeparator />}
+          </>
+        )}
 
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {COLUMNS.filter((c) => c.status !== task.status).map((c) => (
-              <DropdownMenuItem
-                key={c.status}
-                onClick={() =>
-                  move.mutate({
-                    taskId: task.id,
-                    status: c.status,
-                    beforeTaskId: null,
-                    afterTaskId: null,
-                  })
-                }
-              >
-                {c.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        {canEdit && (
+          <>
+            <DropdownMenuItem onClick={onEdit}>Edit details</DropdownMenuItem>
 
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Assignee</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup
-              value={task.assigneeId ?? "none"}
-              onValueChange={(v) =>
-                assign.mutate({
-                  taskId: task.id,
-                  assigneeId: v === "none" ? null : v,
-                })
-              }
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {COLUMNS.filter((c) => c.status !== task.status).map((c) => (
+                  <DropdownMenuItem
+                    key={c.status}
+                    onClick={() =>
+                      move.mutate({
+                        taskId: task.id,
+                        status: c.status,
+                        beforeTaskId: null,
+                        afterTaskId: null,
+                      })
+                    }
+                  >
+                    {c.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Assignee</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup
+                  value={task.assigneeId ?? "none"}
+                  onValueChange={(v) =>
+                    assign.mutate({
+                      taskId: task.id,
+                      assigneeId: v === "none" ? null : v,
+                    })
+                  }
+                >
+                  <DropdownMenuRadioItem value="none">Unassigned</DropdownMenuRadioItem>
+                  {members.map((m) => (
+                    <DropdownMenuRadioItem key={m.id} value={m.id}>
+                      {m.name ?? m.email}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => remove.mutate({ taskId: task.id })}
             >
-              <DropdownMenuRadioItem value="none">Unassigned</DropdownMenuRadioItem>
-              {members.map((m) => (
-                <DropdownMenuRadioItem key={m.id} value={m.id}>
-                  {m.name ?? m.email}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => remove.mutate({ taskId: task.id })}
-        >
-          <Trash2 className="size-4" />
-          Delete
-        </DropdownMenuItem>
+              <Trash2 className="size-4" />
+              Delete
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -829,6 +898,195 @@ function TaskDialog({
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
             {isEdit ? "Save changes" : "Add task"}
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Implement-with-AI dialog (coding agent: task → branch → PR)
+// ---------------------------------------------------------------------------
+const ACTIVE_RUN = new Set(["QUEUED", "RUNNING"]);
+
+interface ImplementOutput {
+  summary?: string;
+  confidence?: number;
+  risk?: string;
+  riskReasons?: string[];
+  testsAdded?: boolean;
+  followUps?: string[];
+  pr?: { number?: number; url?: string; branch?: string };
+}
+
+function ImplementDialog({
+  featureRequestId,
+  task,
+  onClose,
+  onSettled,
+}: {
+  featureRequestId: string;
+  task: BoardTask;
+  onClose: () => void;
+  onSettled: () => void;
+}) {
+  const [repoId, setRepoId] = useState<string | undefined>(undefined);
+  const [polling, setPolling] = useState(false);
+
+  const reposQuery = api.coding.repos.useQuery({ featureRequestId });
+  const repos = reposQuery.data?.repos ?? [];
+
+  // Auto-select the sole connected repo.
+  useEffect(() => {
+    if (!repoId && repos.length === 1) setRepoId(repos[0]!.id);
+  }, [repoId, repos]);
+
+  const statusQuery = api.coding.taskStatus.useQuery(
+    { taskId: task.id },
+    { refetchInterval: polling ? 1500 : false },
+  );
+  const run = statusQuery.data?.run ?? null;
+  const pr = statusQuery.data?.pr ?? null;
+  const active = run ? ACTIVE_RUN.has(run.status) : false;
+
+  useEffect(() => {
+    if (active) setPolling(true);
+  }, [active]);
+  useEffect(() => {
+    if (polling && run && !active) {
+      setPolling(false);
+      if (run.status === "FAILED") toast.error(run.error ?? "Implementation failed.");
+      else if (run.status === "COMPLETED") toast.success("Pull request opened.");
+      onSettled();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [polling, run?.status, active]);
+
+  const implement = api.coding.implement.useMutation({
+    onSuccess: () => {
+      setPolling(true);
+      void statusQuery.refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const out = (run?.output ?? null) as ImplementOutput | null;
+  const busy = polling || active || implement.isPending;
+  const needsRepoChoice = repos.length > 1 && !repoId;
+  const noRepos = reposQuery.isSuccess && repos.length === 0;
+  const completed = run?.status === "COMPLETED";
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
+      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="size-4 text-primary" />
+            Implement with AI
+          </DialogTitle>
+          <DialogDescription>
+            The coding agent reads the connected repository, implements{" "}
+            <span className="font-medium">{task.title}</span>, and opens a pull
+            request for review. One PR per task.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {noRepos && (
+            <p className="text-muted-foreground rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-sm">
+              No GitHub repository is connected to this feature&rsquo;s project.
+              Connect one from the project page first.
+            </p>
+          )}
+
+          {repos.length > 1 && !busy && !completed && (
+            <div className="space-y-1.5">
+              <Label>Repository</Label>
+              <Select value={repoId} onValueChange={(v) => setRepoId(v ?? undefined)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a repository" />
+                </SelectTrigger>
+                <SelectContent>
+                  {repos.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.fullName}
+                      {r.analyzedAt ? "" : " (analysis pending)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {busy && (
+            <div className="text-muted-foreground flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-sm">
+              <Loader2 className="size-4 animate-spin text-primary" />
+              {run?.step ?? "Starting…"}
+              {typeof run?.progress === "number" && run.progress > 0 && (
+                <span>· {run.progress}%</span>
+              )}
+            </div>
+          )}
+
+          {completed && out && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3 text-sm">
+              {out.summary && <p className="leading-relaxed">{out.summary}</p>}
+              <div className="flex flex-wrap items-center gap-2">
+                {typeof out.confidence === "number" && (
+                  <span className="app-task-chip">
+                    Confidence {out.confidence}%
+                  </span>
+                )}
+                {out.risk && (
+                  <span
+                    className={`app-task-chip gap-1 ${out.risk === "HIGH" ? "text-destructive" : ""}`}
+                  >
+                    <ShieldAlert className="size-3" />
+                    {out.risk[0]! + out.risk.slice(1).toLowerCase()} risk
+                  </span>
+                )}
+                {out.testsAdded && <span className="app-task-chip">Tests added</span>}
+              </div>
+              {out.riskReasons && out.riskReasons.length > 0 && (
+                <ul className="text-muted-foreground list-disc space-y-0.5 pl-5">
+                  {out.riskReasons.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              )}
+              {pr && (
+                <Link
+                  href={pr.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary inline-flex items-center gap-1.5 font-medium hover:underline"
+                >
+                  <GitPullRequest className="size-4" />
+                  View pull request #{pr.number}
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            {completed ? "Close" : "Cancel"}
+          </Button>
+          {!completed && (
+            <Button
+              className="gap-1.5"
+              disabled={busy || noRepos || needsRepoChoice}
+              onClick={() => implement.mutate({ taskId: task.id, repositoryId: repoId })}
+            >
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              {task.pr ? "Re-implement" : "Implement"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

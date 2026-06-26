@@ -22,8 +22,8 @@
 | 5 | PRD Editor & Approval | ✅ Done |
 | 6 | Planning: Task Generation + Kanban | ✅ Done |
 | 7 | GitHub App & Repository Integration | ✅ Done |
-| 8 | Coding Agent | ⬜ Not started |
-| 9 | AI Code Review | ⬜ Not started |
+| 8 | Coding Agent | ✅ Done |
+| 9 | AI Code Review | ✅ Done |
 | 10 | Fix Loop & Re-Review | ⬜ Not started |
 | 11 | Release Readiness | ⬜ Not started |
 | 12 | Human Approval & Ship | ⬜ Not started |
@@ -337,6 +337,45 @@ example + rotate). `pnpm -r typecheck` green.
 
 **Done when:** From an approved task, ZenBuild creates a branch, commits AI-generated changes grounded in real repo context, and opens a real PR that flows into the review pipeline — with a recorded confidence score and full reproducibility. (External human/agent PRs work identically via Phase 7.)
 
+> **Status: ✅ Done.**
+> - **`packages/ai`** (`src/coding/`): the agentic coding tier. `RepoContextSchema`
+>   (stack/frameworks/package-manager/test+lint commands/conventions/key-dirs/entry-points)
+>   and `ImplementationSchema` (whole-file `files[]` ADD/MODIFY + `deletions[]`, commit
+>   message, PR title/body, **confidence 0-100 + risk + riskReasons**, **selfChecks**,
+>   testsAdded, followUps). A read-only `RepoToolkit` (`list_files`/`read_file`, bounded +
+>   recorded) is decoupled from GitHub so it's unit-testable with a fake. `analyzeRepo` and
+>   `implementTask` use `generateText` with those tools + a forced answer-tool
+>   (`submit_repo_context` / `submit_implementation`) so one call can both explore the repo
+>   and return a validated object; `stopWhen` bounds the loop (`MAX_TOOL_STEPS` + the submit
+>   tool). New `codingModel()` / `MODELS.coding`.
+> - **`packages/github`** (`authoring.ts`): `getRepoTree` (recursive, capped), `getFileContent`
+>   (base64-decoded, size-bounded, 404-safe), and `openPullRequestWithChanges` — lands a
+>   whole-file patch set via the Git Data API (blobs → tree on `base_tree` → commit → ref) and
+>   opens the PR. Idempotent on re-run: existing branch is force-updated, existing open PR is
+>   reused. Per-installation (least-privilege) tokens throughout.
+> - **`packages/jobs`**: `coding/repo.analyze` (`coding-repo-analyze`) caches a `RepoContext`
+>   on `Repository.analysis`/`analyzedAt`; `coding/task.implement` (`coding-task-implement`,
+>   `retries: 1` — side-effecting) self-heals analysis if missing, generates the patch set,
+>   opens **one PR per task** on branch `zenbuild/<fr>/<task>` with the `<!-- zenbuild … -->`
+>   marker, upserts the `PullRequest` (origin AGENT, linked to fr+task), moves the task →
+>   IN_REVIEW and the feature IN_DEVELOPMENT → IN_REVIEW, audit-logs, and emits `github/pr.sync`
+>   to backfill the real diff/line-counts. The full reproducibility record (model, tokens,
+>   confidence/risk, self-checks, pinned context snapshot, files read, tool calls) lands on the
+>   `WorkflowRun.output`. A shared `buildOctokitToolkit` wires the toolkit to Octokit.
+> - **API** (`coding` router): `repos` (candidate connected repos for a feature + analysis
+>   state), `implement` (async; auto-picks a sole connected repo, else requires `repositoryId`;
+>   gated to IN_DEVELOPMENT/IN_REVIEW/FIX_NEEDED), `analyzeRepo` (owner/admin), `taskStatus`
+>   (latest implement run + resulting PR, polled). `github.connect` now auto-triggers
+>   `repo.analyze`; `task.board` returns each task's latest PR + a `canImplement` flag.
+> - **Web**: per-task **Implement with AI** action on the Kanban card menu (available through
+>   development/review, not just while editable), opening an `ImplementDialog` with a repo
+>   picker (when >1 connected), live progress, and a completion summary (confidence/risk/tests +
+>   PR link). Cards show a PR chip linking to the agent's PR. The project Repositories card shows
+>   per-repo analysis state + a **Re-analyze** action.
+> - **Verified**: `pnpm -r typecheck` green across all 10 packages; env-free smoke (Implementation/
+>   RepoContext schema validation, toolkit list/read/truncate/record behavior, prompt grounding)
+>   20/20. Live operations require `OPENAI_API_KEY` + the `GITHUB_APP_*` env + a real installation.
+
 ---
 
 # Phase 9 — AI Review Loop
@@ -350,6 +389,30 @@ example + rotate). `pnpm -r typecheck` green.
 5. **State**: blocking issues → feature `FIX_NEEDED`; none → `IN_REVIEW` ready for human.
 
 **Done when:** A real PR gets an AI review with categorized, explained, actionable issues posted to GitHub and stored in ZenBuild.
+
+> **Status: ✅ Done.**
+> - **`packages/ai`** (`src/review/`): `PrReviewOutputSchema` + `ReviewIssueOutputSchema`
+>   (verdict, summary, issues with severity/category/file/line/explanation/suggestion),
+>   `REVIEW_SYSTEM` + `buildReviewPrompt` (grounds on request + approved PRD markdown +
+>   all tasks/AC + changed files + unified diff), and `reviewPullRequest` via
+>   `generateObject` with post-validation (blocking issues → `REQUEST_CHANGES`).
+> - **`packages/github`** (`reviews.ts`): `postPullRequestReview` (summary + up to 25 inline
+>   comments via `pulls.createReview`, graceful fallback when line numbers are stale) and
+>   `formatReviewBody` for GitHub markdown.
+> - **`packages/jobs`**: `review/pr.requested` (`review-pr`, `retries: 2`) loads PR + repo +
+>   feature context, runs the QA agent, persists `Review` vN + `ReviewIssue[]`, posts to
+>   GitHub (stores `githubReviewId`), moves the feature → `FIX_NEEDED` when blocking issues
+>   exist else `IN_REVIEW`, audit-logs `pr.review`, and records token usage on the review +
+>   full output on the `WorkflowRun`. `enqueuePrReview` + `shouldAutoReviewAfterSync` shared
+>   helpers; `github-pr-sync` auto-enqueues after open/sync/push/agent-implement when the PR
+>   is linked and the head SHA hasn't already been reviewed (dedupes in-flight runs).
+> - **API** (`review` router): `list` (org feed), `byId`, `forFeature` (PRs + reviews),
+>   `trigger` (manual Review now), `prStatus` (poll latest run + latest review), `canAutoReview`.
+> - **Web**: `ReviewPanel` on the feature-request detail page (per-PR latest review, issues,
+>   Review now + live progress); `/reviews` workspace feed. Sidebar link was already wired.
+> - **Verified**: `pnpm -r typecheck` green. Live review requires `OPENAI_API_KEY` +
+>   `GITHUB_APP_*` + Inngest dev server; auto-review fires after `github/pr.sync` on linked
+>   open PRs.
 
 ---
 

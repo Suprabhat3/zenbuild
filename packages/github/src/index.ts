@@ -37,3 +37,21 @@ export {
   looksAgentAuthored,
   type ZenbuildRef,
 } from "./linking";
+
+export {
+  getRepoTree,
+  getFileContent,
+  openPullRequestWithChanges,
+  type FileWrite,
+  type OpenPullRequestInput,
+  type OpenedPullRequest,
+} from "./authoring";
+
+export {
+  postPullRequestReview,
+  formatReviewBody,
+  type GithubReviewEvent,
+  type InlineReviewComment,
+  type PostPullRequestReviewInput,
+  type PostedPullRequestReview,
+} from "./reviews";
