@@ -16,10 +16,16 @@ const AUTO_REVIEW_REASONS = new Set([
   "push",
 ]);
 
+/** Re-review is triggered by push/sync/agent re-implement while FIX_NEEDED. */
+const REREVIEW_REASONS = new Set(["synchronize", "push", "agent-implement"]);
+
 /**
  * Whether an inbound PR sync should enqueue a fresh AI review. Skips when the
  * PR is not linked, the feature is not in a reviewable state, the commit was
  * already reviewed, or a review is already in flight.
+ *
+ * Phase 10: when the feature is `FIX_NEEDED`, only `push` / `synchronize`
+ * (new commits) enqueue a re-review — not passive sync reasons like `opened`.
  */
 export async function shouldAutoReviewAfterSync(args: {
   organizationId: string;
@@ -30,7 +36,7 @@ export async function shouldAutoReviewAfterSync(args: {
   reason?: string;
   /** Manual retriggers bypass the headSha dedupe. */
   force?: boolean;
-}): Promise<{ enqueue: boolean; skipReason?: string }> {
+}): Promise<{ enqueue: boolean; skipReason?: string; isReReview?: boolean }> {
   if (!args.featureRequestId) {
     return { enqueue: false, skipReason: "unlinked-pr" };
   }
@@ -42,7 +48,14 @@ export async function shouldAutoReviewAfterSync(args: {
   ) {
     return { enqueue: false, skipReason: "feature-not-reviewable" };
   }
-  if (!args.force && args.reason && !AUTO_REVIEW_REASONS.has(args.reason)) {
+
+  const isReReview = args.featureStatus === "FIX_NEEDED";
+
+  if (!args.force && isReReview && args.reason && !REREVIEW_REASONS.has(args.reason)) {
+    return { enqueue: false, skipReason: "fix-needed-awaiting-push" };
+  }
+
+  if (!args.force && !isReReview && args.reason && !AUTO_REVIEW_REASONS.has(args.reason)) {
     return { enqueue: false, skipReason: "reason-not-reviewable" };
   }
 
@@ -76,7 +89,7 @@ export async function shouldAutoReviewAfterSync(args: {
     }
   }
 
-  return { enqueue: true };
+  return { enqueue: true, isReReview };
 }
 
 /**
@@ -89,6 +102,7 @@ export async function enqueuePrReview(args: {
   featureRequestId: string;
   headSha?: string | null;
   triggeredBy?: string;
+  isReReview?: boolean;
 }) {
   const run = await db.workflowRun.create({
     data: {
@@ -100,6 +114,7 @@ export async function enqueuePrReview(args: {
         pullRequestId: args.pullRequestId,
         headSha: args.headSha ?? null,
         triggeredBy: args.triggeredBy ?? "webhook",
+        isReReview: args.isReReview ?? false,
       },
     },
   });

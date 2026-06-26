@@ -5,6 +5,7 @@ import type { RequestContext } from "../prompts";
 import {
   buildReviewPrompt,
   REVIEW_SYSTEM,
+  type PriorReviewContext,
   type PullRequestReviewContext,
   type TaskReviewContext,
 } from "./prompts";
@@ -18,14 +19,16 @@ export interface ReviewPullRequestResult {
 
 /**
  * Runs the QA review agent against a pull request diff, grounded in the approved
- * PRD and engineering tasks. Returns a validated structured review suitable
- * for persistence and GitHub posting.
+ * PRD and engineering tasks. When `priorReview` is set (re-review after fixes),
+ * the model verifies prior issues were addressed. Returns a validated structured
+ * review suitable for persistence and GitHub posting.
  */
 export async function reviewPullRequest(args: {
   ctx: RequestContext;
   prdMarkdown: string;
   tasks: TaskReviewContext[];
   pullRequest: PullRequestReviewContext;
+  priorReview?: PriorReviewContext | null;
 }): Promise<ReviewPullRequestResult> {
   const { object, usage } = await generateObject({
     model: discoveryModel(),

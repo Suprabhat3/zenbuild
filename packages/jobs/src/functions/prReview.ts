@@ -1,8 +1,8 @@
+import type { ReviewIssueOutput } from "@zenbuild/ai";
 import {
   REVIEW_CATEGORY_LABELS,
   REVIEW_SEVERITY_LABELS,
   reviewPullRequest,
-  type ReviewIssueOutput,
 } from "@zenbuild/ai";
 import { db } from "@zenbuild/db";
 import {
@@ -13,6 +13,7 @@ import {
 import type { InngestFunction } from "inngest";
 
 import { inngest, prReviewRequested } from "../client";
+import { computeFeatureReviewStatus } from "../reviewStatus";
 import { markCompleted, markFailed, markRunning, updateProgress } from "../workflow";
 
 function toStringArray(value: unknown): string[] {
@@ -120,8 +121,41 @@ export const prReviewFn: InngestFunction.Any = inngest.createFunction(
         });
         const version = (maxVersion._max.version ?? 0) + 1;
 
+        const priorReview =
+          version > 1
+            ? await db.review.findFirst({
+                where: {
+                  pullRequestId,
+                  version: version - 1,
+                  status: "COMPLETED",
+                },
+                include: {
+                  issues: {
+                    orderBy: [{ severity: "asc" }, { createdAt: "asc" }],
+                  },
+                },
+              })
+            : null;
+
         return {
           version,
+          isReReview: version > 1,
+          priorReview: priorReview
+            ? {
+                version: priorReview.version,
+                verdict: priorReview.verdict,
+                summary: priorReview.summary,
+                issues: priorReview.issues.map((i) => ({
+                  severity: i.severity,
+                  category: i.category,
+                  title: i.title,
+                  explanation: i.explanation,
+                  suggestion: i.suggestion,
+                  filePath: i.filePath,
+                  line: i.line,
+                })),
+              }
+            : null,
           pr: {
             number: pr.number,
             title: pr.title,
@@ -183,6 +217,7 @@ export const prReviewFn: InngestFunction.Any = inngest.createFunction(
             changedFiles: loaded.pr.changedFiles,
             diff: loaded.pr.diff,
           },
+          priorReview: loaded.priorReview,
         }),
       );
 
@@ -197,7 +232,7 @@ export const prReviewFn: InngestFunction.Any = inngest.createFunction(
 
       const persisted = await step.run("persist-review", async () => {
         const reviewOutput = result.review;
-        const reviewId = await db.$transaction(async (tx) => {
+        const persistedInner = await db.$transaction(async (tx) => {
           const review = await tx.review.create({
             data: {
               organizationId,
@@ -226,7 +261,7 @@ export const prReviewFn: InngestFunction.Any = inngest.createFunction(
             select: { id: true },
           });
 
-          const nextStatus = blockingCount > 0 ? "FIX_NEEDED" : "IN_REVIEW";
+          const nextStatus = await computeFeatureReviewStatus(tx, featureRequestId);
           await tx.featureRequest.updateMany({
             where: {
               id: featureRequestId,
@@ -237,10 +272,15 @@ export const prReviewFn: InngestFunction.Any = inngest.createFunction(
             data: { status: nextStatus },
           });
 
-          return review.id;
+          return { reviewId: review.id, featureStatus: nextStatus };
         });
 
-        return { reviewId, blockingCount, nonBlockingCount };
+        return {
+          reviewId: persistedInner.reviewId,
+          blockingCount,
+          nonBlockingCount,
+          featureStatus: persistedInner.featureStatus,
+        };
       });
 
       const posted = await step.run("post-github-review", async () => {
@@ -262,6 +302,7 @@ export const prReviewFn: InngestFunction.Any = inngest.createFunction(
           summary: result.review.summary,
           blockingCount,
           nonBlockingCount,
+          isReReview: loaded.isReReview,
         });
 
         return postPullRequestReview({
@@ -295,12 +336,13 @@ export const prReviewFn: InngestFunction.Any = inngest.createFunction(
                 event.data.triggeredBy !== "webhook"
                   ? event.data.triggeredBy
                   : null,
-              action: "pr.review",
+              action: loaded.isReReview ? "pr.rereview" : "pr.review",
               entityType: "pull_request",
               entityId: pullRequestId,
               metadata: {
                 reviewId: persisted.reviewId,
                 version: loaded.version,
+                isReReview: loaded.isReReview,
                 verdict: result.review.verdict,
                 blockingCount,
                 nonBlockingCount,
@@ -316,11 +358,13 @@ export const prReviewFn: InngestFunction.Any = inngest.createFunction(
         markCompleted(workflowRunId, {
           reviewId: persisted.reviewId,
           version: loaded.version,
+          isReReview: loaded.isReReview,
           verdict: result.review.verdict,
           summary: result.review.summary,
           blockingCount,
           nonBlockingCount,
           issueCount: result.review.issues.length,
+          featureStatus: persisted.featureStatus,
           githubReview: { id: posted.id, url: posted.url },
           model: result.model,
           promptTokens: result.usage.promptTokens ?? null,

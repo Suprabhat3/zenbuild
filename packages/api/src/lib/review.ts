@@ -15,24 +15,15 @@ export async function triggerPrReview(
     actorId?: string | null;
     /** Bypass headSha dedupe (manual "Review now"). */
     force?: boolean;
+    isReReview?: boolean;
   },
 ) {
-  if (args.force) {
-    // Manual retriggers always enqueue; dedupe is handled upstream in the router.
-    return enqueuePrReview({
-      organizationId: args.organizationId,
-      pullRequestId: args.pullRequestId,
-      featureRequestId: args.featureRequestId,
-      headSha: args.headSha ?? null,
-      triggeredBy: args.actorId ?? "manual",
-    });
-  }
-
   return enqueuePrReview({
     organizationId: args.organizationId,
     pullRequestId: args.pullRequestId,
     featureRequestId: args.featureRequestId,
     headSha: args.headSha ?? null,
     triggeredBy: args.actorId ?? "manual",
+    isReReview: args.isReReview ?? false,
   });
 }

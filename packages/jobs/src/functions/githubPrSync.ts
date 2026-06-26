@@ -154,6 +154,7 @@ export const githubPrSyncFn: InngestFunction.Any = inngest.createFunction(
         featureRequestId: fr.id,
         headSha: upserted.headSha,
         triggeredBy: "webhook",
+        isReReview: decision.isReReview,
       });
       return { skipped: false, workflowRunId: run.id };
     });

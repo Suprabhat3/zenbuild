@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { isGithubConfigured } from "@zenbuild/github";
-import { shouldAutoReviewAfterSync } from "@zenbuild/jobs";
+import { computeFeatureReviewStatus, shouldAutoReviewAfterSync } from "@zenbuild/jobs";
 import { z } from "zod";
 
 import { triggerPrReview } from "../lib/review";
@@ -244,6 +244,7 @@ export const reviewRouter = createTRPCRouter({
         headSha: pr.headSha,
         actorId: ctx.user.id,
         force: true,
+        isReReview: pr.featureRequest.status === "FIX_NEEDED",
       });
 
       return { workflowRunId: run.id };
@@ -326,6 +327,167 @@ export const reviewRouter = createTRPCRouter({
       return {
         canReview: decision.enqueue,
         reason: decision.skipReason ?? null,
+        isReReview: decision.isReReview ?? false,
+      };
+    }),
+
+  /**
+   * Phase-10 fix-needed summary: outstanding issues from the latest review per
+   * PR, full iteration history, tasks linked to PRs, and any in-flight re-review.
+   */
+  fixNeeded: orgProcedure
+    .input(z.object({ featureRequestId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const fr = await ctx.db.featureRequest.findFirst({
+        where: { id: input.featureRequestId, organizationId: ctx.organizationId },
+        select: { id: true, status: true, title: true },
+      });
+      if (!fr) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Feature request not found.",
+        });
+      }
+
+      const [reviews, pullRequests, activeRun, pipelineStatus, tasks] =
+        await Promise.all([
+          ctx.db.review.findMany({
+            where: {
+              organizationId: ctx.organizationId,
+              featureRequestId: input.featureRequestId,
+              status: "COMPLETED",
+            },
+            orderBy: [{ pullRequestId: "asc" }, { version: "desc" }],
+            select: {
+              id: true,
+              version: true,
+              verdict: true,
+              summary: true,
+              completedAt: true,
+              pullRequestId: true,
+              pullRequest: {
+                select: {
+                  id: true,
+                  number: true,
+                  url: true,
+                  title: true,
+                  headRef: true,
+                  taskId: true,
+                  repository: { select: { fullName: true } },
+                },
+              },
+              issues: { select: issueSelect, orderBy: [{ severity: "asc" }, { createdAt: "asc" }] },
+            },
+          }),
+          ctx.db.pullRequest.findMany({
+            where: {
+              organizationId: ctx.organizationId,
+              featureRequestId: input.featureRequestId,
+              status: "OPEN",
+            },
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              number: true,
+              url: true,
+              title: true,
+              headRef: true,
+              headSha: true,
+              taskId: true,
+              repository: { select: { fullName: true } },
+            },
+          }),
+          ctx.db.workflowRun.findFirst({
+            where: {
+              organizationId: ctx.organizationId,
+              featureRequestId: input.featureRequestId,
+              type: "PR_REVIEW",
+              status: { in: ["QUEUED", "RUNNING"] },
+            },
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              status: true,
+              progress: true,
+              step: true,
+              input: true,
+              createdAt: true,
+            },
+          }),
+          computeFeatureReviewStatus(ctx.db, input.featureRequestId),
+          ctx.db.task.findMany({
+            where: { featureRequestId: input.featureRequestId },
+            orderBy: { rank: "asc" },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          }),
+        ]);
+
+      const latestByPr = new Map<string, (typeof reviews)[number]>();
+      const iterationsByPr = new Map<string, (typeof reviews)[number][]>();
+
+      for (const review of reviews) {
+        if (!latestByPr.has(review.pullRequestId)) {
+          latestByPr.set(review.pullRequestId, review);
+        }
+        const list = iterationsByPr.get(review.pullRequestId) ?? [];
+        list.push(review);
+        iterationsByPr.set(review.pullRequestId, list);
+      }
+
+      const blockingIssues: (typeof reviews)[number]["issues"] = [];
+      const nonBlockingIssues: (typeof reviews)[number]["issues"] = [];
+
+      for (const latest of latestByPr.values()) {
+        for (const issue of latest.issues) {
+          if (issue.severity === "BLOCKING") blockingIssues.push(issue);
+          else nonBlockingIssues.push(issue);
+        }
+      }
+
+      const prSummaries = pullRequests.map((pr) => {
+        const latest = latestByPr.get(pr.id);
+        const iterations = (iterationsByPr.get(pr.id) ?? []).map((r) => ({
+          id: r.id,
+          version: r.version,
+          verdict: r.verdict,
+          completedAt: r.completedAt,
+          blockingCount: r.issues.filter((i) => i.severity === "BLOCKING").length,
+          nonBlockingCount: r.issues.filter((i) => i.severity === "NON_BLOCKING")
+            .length,
+        }));
+        const task = pr.taskId ? tasks.find((t) => t.id === pr.taskId) : null;
+        return {
+          pullRequest: pr,
+          task,
+          latestReview: latest
+            ? {
+                id: latest.id,
+                version: latest.version,
+                verdict: latest.verdict,
+                summary: latest.summary,
+                completedAt: latest.completedAt,
+                issues: latest.issues,
+              }
+            : null,
+          iterations,
+        };
+      });
+
+      return {
+        feature: fr,
+        pipelineStatus,
+        blockingCount: blockingIssues.length,
+        nonBlockingCount: nonBlockingIssues.length,
+        blockingIssues,
+        nonBlockingIssues,
+        pullRequests: prSummaries,
+        totalReviewIterations: reviews.length,
+        activeRun,
+        tasks,
       };
     }),
 });

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  AlertTriangle,
   CheckCircle2,
   ExternalLink,
   GitPullRequest,
+  History,
   Loader2,
   MessageSquareWarning,
   Sparkles,
@@ -125,17 +125,24 @@ export function ReviewPanel({
   if (!visibleStatuses.includes(status)) return null;
 
   const latestByPr = new Map<string, LatestReviewView>();
+  const historyByPr = new Map<string, LatestReviewView[]>();
+
   for (const r of reviews) {
-    if (!latestByPr.has(r.pullRequestId) && r.status === "COMPLETED") {
-      latestByPr.set(r.pullRequestId, {
-        id: r.id,
-        version: r.version,
-        status: r.status,
-        verdict: r.verdict as ReviewVerdict | null,
-        summary: r.summary,
-        completedAt: r.completedAt,
-        issues: r.issues as ReviewIssueView[],
-      });
+    if (r.status !== "COMPLETED") continue;
+    const entry: LatestReviewView = {
+      id: r.id,
+      version: r.version,
+      status: r.status,
+      verdict: r.verdict as ReviewVerdict | null,
+      summary: r.summary,
+      completedAt: r.completedAt,
+      issues: r.issues as ReviewIssueView[],
+    };
+    const hist = historyByPr.get(r.pullRequestId) ?? [];
+    hist.push(entry);
+    historyByPr.set(r.pullRequestId, hist);
+    if (!latestByPr.has(r.pullRequestId)) {
+      latestByPr.set(r.pullRequestId, entry);
     }
   }
 
@@ -237,7 +244,7 @@ export function ReviewPanel({
 
               {latest && latest.issues.length > 0 && (
                 <ul className="space-y-2">
-                  {latest.issues.slice(0, 5).map((issue) => (
+                  {latest.issues.slice(0, status === "FIX_NEEDED" ? 3 : 5).map((issue) => (
                     <li
                       key={issue.id}
                       className="rounded-md border border-border/80 bg-background px-3 py-2 text-sm"
@@ -268,25 +275,49 @@ export function ReviewPanel({
                       )}
                     </li>
                   ))}
-                  {latest.issues.length > 5 && (
+                  {latest.issues.length > (status === "FIX_NEEDED" ? 3 : 5) && (
                     <li className="text-muted-foreground text-xs">
-                      + {latest.issues.length - 5} more issues
+                      + {latest.issues.length - (status === "FIX_NEEDED" ? 3 : 5)} more
+                      issues
+                      {status === "FIX_NEEDED" && " (see Fix needed panel above)"}
                     </li>
                   )}
                 </ul>
               )}
 
-              {latest && blocking > 0 && status === "FIX_NEEDED" && (
-                <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    Blocking issues found — address them and push updates to
-                    trigger a fresh review on the next sync.
-                  </span>
-                </div>
+              {(historyByPr.get(pr.id)?.length ?? 0) > 1 && (
+                <details className="text-sm">
+                  <summary className="text-muted-foreground flex cursor-pointer items-center gap-1.5 text-xs font-medium">
+                    <History className="size-3.5" />
+                    {historyByPr.get(pr.id)!.length} review iterations
+                  </summary>
+                  <ol className="mt-2 space-y-1 pl-4 text-xs">
+                    {historyByPr.get(pr.id)!.map((rev) => {
+                      const b = rev.issues.filter((i) => i.severity === "BLOCKING").length;
+                      const nb = rev.issues.length - b;
+                      return (
+                        <li key={rev.id} className="text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            v{rev.version}
+                          </span>
+                          {rev.verdict && (
+                            <> · {VERDICT_LABELS[rev.verdict]}</>
+                          )}
+                          {" · "}
+                          {b} blocking, {nb} non-blocking
+                          {rev.completedAt &&
+                            ` · ${new Date(rev.completedAt).toLocaleString()}`}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </details>
               )}
 
-              {latest && blocking === 0 && latest.verdict === "APPROVE" && (
+              {latest &&
+                blocking === 0 &&
+                latest.verdict === "APPROVE" &&
+                status !== "FIX_NEEDED" && (
                 <div className="text-muted-foreground flex items-center gap-2 text-sm">
                   <CheckCircle2 className="size-4 text-primary" />
                   No blocking issues — ready for human approval.

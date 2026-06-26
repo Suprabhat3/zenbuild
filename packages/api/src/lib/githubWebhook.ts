@@ -133,7 +133,7 @@ async function handlePush(
   if (!repo) return { ok: true, handled: false, detail: "Repo not connected." };
 
   // Re-sync any open PRs whose head is the pushed branch (keeps diffs current;
-  // the re-review trigger is layered on in a later phase).
+  // FIX_NEEDED features auto re-review via `github/pr.sync` → `review/pr.requested`).
   const openPrs = await db.pullRequest.findMany({
     where: { repositoryId: repo.id, headRef: branch, status: "OPEN" },
     select: { number: true },

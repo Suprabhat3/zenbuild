@@ -92,9 +92,13 @@ export function formatReviewBody(args: {
   blockingCount: number;
   nonBlockingCount: number;
   reviewUrl?: string;
+  isReReview?: boolean;
 }): string {
+  const title = args.isReReview
+    ? `ZenBuild AI Re-Review (v${args.version})`
+    : `ZenBuild AI Review (v${args.version})`;
   const lines = [
-    `## ZenBuild AI Review (v${args.version})`,
+    `## ${title}`,
     "",
     args.summary,
     "",

@@ -24,7 +24,7 @@
 | 7 | GitHub App & Repository Integration | ✅ Done |
 | 8 | Coding Agent | ✅ Done |
 | 9 | AI Code Review | ✅ Done |
-| 10 | Fix Loop & Re-Review | ⬜ Not started |
+| 10 | Fix Loop & Re-Review | ✅ Done |
 | 11 | Release Readiness | ⬜ Not started |
 | 12 | Human Approval & Ship | ⬜ Not started |
 | 13 | Billing & Credits (Razorpay) | ⬜ Not started |
@@ -425,6 +425,23 @@ example + rotate). `pnpm -r typecheck` green.
 3. **Convergence**: cycle repeats until no blocking issues → feature becomes review-ready for human approval.
 
 **Done when:** Pushing fixes to a flagged PR automatically re-reviews it, and the feature exits `FIX_NEEDED` only when blocking issues are resolved.
+
+> **Status: ✅ Done.**
+> - **`packages/jobs`**: `computeFeatureReviewStatus` — multi-PR convergence (feature stays
+>   `FIX_NEEDED` while *any* open linked PR's latest review has blocking issues; exits to
+>   `IN_REVIEW` only when every open PR is reviewed clean). `shouldAutoReviewAfterSync`
+>   Phase-10 rules: when `FIX_NEEDED`, only `push` / `synchronize` / `agent-implement`
+>   enqueue a re-review (not passive `opened`). Re-review runs record `isReReview` on the
+>   `WorkflowRun`, audit as `pr.rereview`, and bump review version (v1, v2, …).
+> - **`packages/ai`**: re-review prompt grounding — prior review vN−1 issues injected so the
+>   agent verifies fixes instead of re-flagging resolved items.
+> - **`packages/github`**: `formatReviewBody` labels re-reviews distinctly on GitHub.
+> - **API** (`review.fixNeeded`): aggregated blocking/non-blocking issues, per-PR iteration
+>   timeline, linked tasks, in-flight re-review run, and computed pipeline status.
+> - **Web**: `FixNeededPanel` (prominent when `FIX_NEEDED` — full issue list, iteration
+>   history, board link, re-implement guidance, live re-review progress, manual re-review).
+>   `ReviewPanel` shows iteration history per PR.
+> - **Verified**: `pnpm -r typecheck` green.
 
 ---
 

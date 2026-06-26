@@ -38,6 +38,8 @@ export {
 } from "./client";
 
 export { enqueuePrReview, shouldAutoReviewAfterSync } from "./triggerReview";
+export { computeFeatureReviewStatus } from "./reviewStatus";
+export type { FeatureReviewPipelineStatus } from "./reviewStatus";
 
 /** All Inngest functions, registered by the web app's `/api/inngest` route. */
 export const functions = [

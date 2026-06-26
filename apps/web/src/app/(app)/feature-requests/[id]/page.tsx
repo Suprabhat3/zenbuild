@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { TRPCError } from "@trpc/server";
 
 import { DiscoveryPanel, type ClarificationMessageView } from "@/components/app/discovery-panel";
+import { FixNeededPanel } from "@/components/app/fix-needed-panel";
 import { PlanningPanel } from "@/components/app/planning-panel";
 import { ReviewPanel } from "@/components/app/review-panel";
 import { PrdEditor, type PrdContent } from "@/components/app/prd-editor";
@@ -92,6 +93,8 @@ export default async function FeatureRequestDetailPage({
 
       <div className="app-detail-grid">
         <div className="space-y-6">
+          <FixNeededPanel featureRequestId={request.id} status={status} />
+
           <Card>
             <CardHeader>
               <CardTitle>Description</CardTitle>

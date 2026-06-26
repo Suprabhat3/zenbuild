@@ -61,4 +61,5 @@ export {
   buildReviewPrompt,
   type TaskReviewContext,
   type PullRequestReviewContext,
+  type PriorReviewContext,
 } from "./review/prompts";

@@ -52,6 +52,54 @@ function renderTasks(tasks: TaskReviewContext[]): string {
     .join("\n\n");
 }
 
+export interface PriorReviewContext {
+  version: number;
+  verdict: string | null;
+  summary: string | null;
+  issues: {
+    severity: string;
+    category: string;
+    title: string;
+    explanation: string;
+    suggestion: string | null;
+    filePath: string | null;
+    line: number | null;
+  }[];
+}
+
+function renderPriorReview(prior: PriorReviewContext): string {
+  const issueLines =
+    prior.issues.length === 0
+      ? "(No issues were flagged.)"
+      : prior.issues
+          .map((i, n) => {
+            const loc = i.filePath
+              ? ` @ ${i.filePath}${i.line ? `:${i.line}` : ""}`
+              : "";
+            return [
+              `${n + 1}. [${i.severity}] ${i.title}${loc}`,
+              `   ${i.explanation}`,
+              i.suggestion ? `   Fix: ${i.suggestion}` : null,
+            ]
+              .filter(Boolean)
+              .join("\n");
+          })
+          .join("\n\n");
+
+  return [
+    `Prior review v${prior.version} (${prior.verdict ?? "unknown"})`,
+    prior.summary ? `Summary: ${prior.summary}` : "",
+    "",
+    "Issues flagged previously:",
+    issueLines,
+    "",
+    "This is a RE-REVIEW. Verify each prior blocking issue was addressed in the new diff.",
+    "Do not re-report issues that are clearly fixed. Flag regressions and any remaining gaps.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function renderChangedFiles(
   files: PullRequestReviewContext["changedFiles"],
 ): string {
@@ -91,16 +139,22 @@ export function buildReviewPrompt(args: {
   prdMarkdown: string;
   tasks: TaskReviewContext[];
   pullRequest: PullRequestReviewContext;
+  priorReview?: PriorReviewContext | null;
 }): string {
-  const { ctx, prdMarkdown, tasks, pullRequest } = args;
+  const { ctx, prdMarkdown, tasks, pullRequest, priorReview } = args;
   const diffSection =
     pullRequest.diff.trim().length > 0
       ? pullRequest.diff
       : "(Diff unavailable or empty — review from changed-file list and metadata only.)";
 
   return [
-    "Review this pull request against the product requirements and engineering plan.",
+    priorReview
+      ? "Re-review this pull request after the author pushed fixes."
+      : "Review this pull request against the product requirements and engineering plan.",
     "",
+    ...(priorReview
+      ? ["=== Prior AI review ===", renderPriorReview(priorReview), ""]
+      : []),
     "=== Feature request ===",
     renderRequest(ctx),
     "",
