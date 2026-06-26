@@ -25,7 +25,7 @@
 | 8 | Coding Agent | ✅ Done |
 | 9 | AI Code Review | ✅ Done |
 | 10 | Fix Loop & Re-Review | ✅ Done |
-| 11 | Release Readiness | ⬜ Not started |
+| 11 | Review History | ✅ Done |
 | 12 | Human Approval & Ship | ⬜ Not started |
 | 13 | Billing & Credits (Razorpay) | ⬜ Not started |
 | 14 | Polish, Observability & Deploy | ⬜ Not started |
@@ -452,6 +452,18 @@ example + rotate). `pnpm -r typecheck` green.
 - Timeline per feature/PR: each review version, issues, who/what triggered it, GitHub comment links, state transitions. Filter by severity/status.
 
 **Done when:** A feature shows its complete review history across iterations with links to GitHub.
+
+> **Status: ✅ Done.**
+> - **`packages/github`**: `buildGithubReviewUrl` deep-links to posted PR review comments.
+> - **`packages/api`**: `reviewHelpers` (trigger labels, transition labels, row enrichment);
+>   enhanced `list` (severity/verdict/issue-status filters, GitHub links, trigger labels);
+>   enriched `byId`; new `history` (per-feature timeline, grouped by PR, iteration issues,
+>   state transitions, audit trail, pipeline status).
+> - **Web**: `/reviews` → filterable workspace feed (`ReviewsManager`); `/reviews/[reviewId]`
+>   → full review detail with issues + GitHub link; `/feature-requests/[id]/reviews` →
+>   `ReviewHistoryTimeline` (activity timeline, per-PR iteration cards, severity/status
+>   filters). Links from feature detail + review panel. Timeline styles in `app.css`.
+> - **Verified**: `pnpm -r typecheck` green.
 
 ---
 

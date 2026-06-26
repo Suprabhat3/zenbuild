@@ -857,3 +857,34 @@
   line-height: 1.5;
   color: var(--zb-ink-soft);
 }
+
+/* ---------- review history timeline (Phase 11) ---------- */
+.app-review-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.app-review-timeline-item {
+  position: relative;
+  padding-left: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-left: 2px solid var(--zb-line);
+}
+
+.app-review-timeline-item:last-child {
+  padding-bottom: 0;
+  border-left-color: transparent;
+}
+
+.app-review-timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -0.4375rem;
+  top: 0.35rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  background: var(--zb-paper);
+  border: 2px solid var(--zb-accent);
+}

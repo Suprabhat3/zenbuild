@@ -146,6 +146,14 @@ export default async function FeatureRequestDetailPage({
                 value={String(request._count.pullRequests)}
               />
               <MetaRow label="Reviews" value={String(request._count.reviews)} />
+              {request._count.reviews > 0 && (
+                <Link
+                  href={`/feature-requests/${request.id}/reviews`}
+                  className="text-primary mt-2 inline-block text-sm font-medium hover:underline"
+                >
+                  View review history →
+                </Link>
+              )}
             </CardContent>
           </Card>
 

@@ -111,3 +111,13 @@ export function formatReviewBody(args: {
   }
   return lines.join("\n");
 }
+
+/** Deep-link to a posted PR review on GitHub. */
+export function buildGithubReviewUrl(
+  pullRequestUrl: string,
+  githubReviewId: number | bigint | null | undefined,
+): string | null {
+  if (githubReviewId == null) return null;
+  const base = pullRequestUrl.split("#")[0]!.replace(/\/$/, "");
+  return `${base}#pullrequestreview-${githubReviewId.toString()}`;
+}

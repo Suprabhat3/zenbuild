@@ -1,12 +1,17 @@
 import { TRPCError } from "@trpc/server";
-import { isGithubConfigured } from "@zenbuild/github";
+import { isGithubConfigured, buildGithubReviewUrl } from "@zenbuild/github";
 import { computeFeatureReviewStatus, shouldAutoReviewAfterSync } from "@zenbuild/jobs";
 import { z } from "zod";
 
 import { triggerPrReview } from "../lib/review";
+import { enrichReviewRow, resolveReviewTriggerLabel } from "../lib/reviewHelpers";
 import { createTRPCRouter, orgProcedure } from "../trpc";
 
 const REVIEWABLE_FEATURE = ["IN_DEVELOPMENT", "IN_REVIEW", "FIX_NEEDED"] as const;
+
+const severityFilter = z.enum(["BLOCKING", "NON_BLOCKING"]);
+const issueStatusFilter = z.enum(["OPEN", "RESOLVED", "WONT_FIX"]);
+const verdictFilter = z.enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"]);
 
 const issueSelect = {
   id: true,
@@ -21,18 +26,52 @@ const issueSelect = {
   createdAt: true,
 } as const;
 
+const reviewDetailSelect = {
+  id: true,
+  version: true,
+  status: true,
+  verdict: true,
+  summary: true,
+  githubReviewId: true,
+  triggeredBy: true,
+  model: true,
+  promptTokens: true,
+  completionTokens: true,
+  createdAt: true,
+  completedAt: true,
+  pullRequestId: true,
+  featureRequestId: true,
+  pullRequest: {
+    select: {
+      id: true,
+      number: true,
+      url: true,
+      title: true,
+      headRef: true,
+      status: true,
+      repository: { select: { fullName: true } },
+    },
+  },
+  issues: {
+    select: issueSelect,
+    orderBy: [{ severity: "asc" as const }, { createdAt: "asc" as const }],
+  },
+};
+
 /**
- * Phase-9 AI code review surface: list reviews, read a review with issues,
- * trigger a manual re-review, and poll the latest run for live progress.
+ * Phase 9–11 AI code review: list/detail, fix-needed, history timeline, triggers.
  */
 export const reviewRouter = createTRPCRouter({
-  /** Org-wide review feed for the Reviews page. */
+  /** Org-wide review feed for the Reviews page (filterable). */
   list: orgProcedure
     .input(
       z
         .object({
           featureRequestId: z.string().optional(),
           limit: z.number().int().min(1).max(100).optional(),
+          severity: severityFilter.optional(),
+          issueStatus: issueStatusFilter.optional(),
+          verdict: verdictFilter.optional(),
         })
         .optional(),
     )
@@ -44,6 +83,17 @@ export const reviewRouter = createTRPCRouter({
           ...(input?.featureRequestId
             ? { featureRequestId: input.featureRequestId }
             : {}),
+          ...(input?.verdict ? { verdict: input.verdict } : {}),
+          ...(input?.severity || input?.issueStatus
+            ? {
+                issues: {
+                  some: {
+                    ...(input.severity ? { severity: input.severity } : {}),
+                    ...(input.issueStatus ? { status: input.issueStatus } : {}),
+                  },
+                },
+              }
+            : {}),
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -53,6 +103,8 @@ export const reviewRouter = createTRPCRouter({
           status: true,
           verdict: true,
           summary: true,
+          githubReviewId: true,
+          triggeredBy: true,
           createdAt: true,
           completedAt: true,
           pullRequest: {
@@ -68,47 +120,45 @@ export const reviewRouter = createTRPCRouter({
           featureRequest: {
             select: { id: true, title: true, status: true },
           },
-          _count: { select: { issues: true } },
+          issues: { select: { severity: true } },
         },
       });
 
-      const enriched = await Promise.all(
+      return Promise.all(
         reviews.map(async (r) => {
-          const counts = await ctx.db.reviewIssue.groupBy({
-            by: ["severity"],
-            where: { reviewId: r.id },
-            _count: true,
-          });
-          const blocking =
-            counts.find((c) => c.severity === "BLOCKING")?._count ?? 0;
-          const nonBlocking =
-            counts.find((c) => c.severity === "NON_BLOCKING")?._count ?? 0;
-          return { ...r, blockingCount: blocking, nonBlockingCount: nonBlocking };
+          const blockingCount = r.issues.filter((i) => i.severity === "BLOCKING").length;
+          const nonBlockingCount = r.issues.length - blockingCount;
+          const trigger = await resolveReviewTriggerLabel(ctx.db, r.triggeredBy);
+          return {
+            id: r.id,
+            version: r.version,
+            status: r.status,
+            verdict: r.verdict,
+            summary: r.summary,
+            createdAt: r.createdAt,
+            completedAt: r.completedAt,
+            pullRequest: r.pullRequest,
+            featureRequest: r.featureRequest,
+            blockingCount,
+            nonBlockingCount,
+            isReReview: r.version > 1,
+            triggeredByLabel: trigger.label,
+            githubReviewUrl: r.pullRequest
+              ? buildGithubReviewUrl(r.pullRequest.url, r.githubReviewId)
+              : null,
+          };
         }),
       );
-
-      return enriched;
     }),
 
-  /** Full review detail with every issue — for the review detail panel. */
+  /** Full review detail with every issue — review detail page + approval inputs. */
   byId: orgProcedure
     .input(z.object({ reviewId: z.string() }))
     .query(async ({ ctx, input }) => {
       const review = await ctx.db.review.findFirst({
         where: { id: input.reviewId, organizationId: ctx.organizationId },
-        include: {
-          issues: { orderBy: [{ severity: "asc" }, { createdAt: "asc" }] },
-          pullRequest: {
-            select: {
-              id: true,
-              number: true,
-              url: true,
-              title: true,
-              headRef: true,
-              status: true,
-              repository: { select: { fullName: true } },
-            },
-          },
+        select: {
+          ...reviewDetailSelect,
           featureRequest: {
             select: { id: true, title: true, status: true },
           },
@@ -117,7 +167,13 @@ export const reviewRouter = createTRPCRouter({
       if (!review) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Review not found." });
       }
-      return review;
+      const enriched = await enrichReviewRow(ctx.db, review);
+      return {
+        ...enriched,
+        featureRequest: review.featureRequest,
+        promptTokens: review.promptTokens,
+        completionTokens: review.completionTokens,
+      };
     }),
 
   /** Reviews for a feature request, newest first. */
@@ -488,6 +544,161 @@ export const reviewRouter = createTRPCRouter({
         totalReviewIterations: reviews.length,
         activeRun,
         tasks,
+      };
+    }),
+
+  /**
+   * Phase-11 review history: full timeline per feature/PR with iterations,
+   * issues, triggers, GitHub links, and derived state transitions.
+   */
+  history: orgProcedure
+    .input(
+      z.object({
+        featureRequestId: z.string(),
+        severity: severityFilter.optional(),
+        issueStatus: issueStatusFilter.optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const fr = await ctx.db.featureRequest.findFirst({
+        where: { id: input.featureRequestId, organizationId: ctx.organizationId },
+        select: { id: true, title: true, status: true },
+      });
+      if (!fr) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Feature request not found.",
+        });
+      }
+
+      const reviews = await ctx.db.review.findMany({
+        where: {
+          organizationId: ctx.organizationId,
+          featureRequestId: input.featureRequestId,
+          status: "COMPLETED",
+        },
+        orderBy: [{ pullRequestId: "asc" }, { version: "asc" }],
+        select: reviewDetailSelect,
+      });
+
+      const enriched = await Promise.all(
+        reviews.map((r) => enrichReviewRow(ctx.db, r)),
+      );
+
+      const filterIssue = (issues: (typeof enriched)[number]["issues"]) =>
+        issues.filter((issue) => {
+          if (input.severity && issue.severity !== input.severity) return false;
+          if (input.issueStatus && issue.status !== input.issueStatus) return false;
+          return true;
+        });
+
+      const countIssues = (issues: (typeof enriched)[number]["issues"]) => {
+        const blockingCount = issues.filter((i) => i.severity === "BLOCKING").length;
+        return {
+          blockingCount,
+          nonBlockingCount: issues.length - blockingCount,
+        };
+      };
+
+      const byPullRequestMap = new Map<
+        string,
+        {
+          pullRequest: (typeof enriched)[number]["pullRequest"];
+          reviews: (typeof enriched)[number][];
+        }
+      >();
+
+      for (const review of enriched) {
+        const issues = filterIssue(review.issues);
+        const filtered = {
+          ...review,
+          issues,
+          ...countIssues(issues),
+        };
+        if (
+          (input.severity || input.issueStatus) &&
+          filtered.issues.length === 0
+        ) {
+          continue;
+        }
+        const group = byPullRequestMap.get(review.pullRequest.id) ?? {
+          pullRequest: review.pullRequest,
+          reviews: [],
+        };
+        group.reviews.push(filtered);
+        byPullRequestMap.set(review.pullRequest.id, group);
+      }
+
+      const byPullRequest = [...byPullRequestMap.values()];
+
+      const timeline = [...enriched]
+        .filter((r) => {
+          if (!input.severity && !input.issueStatus) return true;
+          return filterIssue(r.issues).length > 0;
+        })
+        .sort((a, b) => {
+          const ta = a.completedAt?.getTime() ?? a.createdAt.getTime();
+          const tb = b.completedAt?.getTime() ?? b.createdAt.getTime();
+          return tb - ta;
+        })
+        .map((r) => {
+          const issues = filterIssue(r.issues);
+          const { blockingCount, nonBlockingCount } = countIssues(issues);
+          return {
+            reviewId: r.id,
+            version: r.version,
+            completedAt: r.completedAt,
+            verdict: r.verdict,
+            blockingCount,
+            nonBlockingCount,
+            triggeredByLabel: r.triggeredByLabel,
+            githubReviewUrl: r.githubReviewUrl,
+            transitionLabel: r.transitionLabel,
+            isReReview: r.isReReview,
+            pullRequest: {
+              id: r.pullRequest.id,
+              number: r.pullRequest.number,
+              url: r.pullRequest.url,
+              title: r.pullRequest.title,
+              fullName: r.pullRequest.repository.fullName,
+            },
+          };
+        });
+
+      const auditEvents = await ctx.db.auditLog.findMany({
+        where: {
+          organizationId: ctx.organizationId,
+          action: { in: ["pr.review", "pr.rereview"] },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+        select: {
+          id: true,
+          action: true,
+          createdAt: true,
+          actorId: true,
+          metadata: true,
+        },
+      });
+
+      const reviewIds = new Set(enriched.map((r) => r.id));
+      const relatedAudit = auditEvents.filter((log) => {
+        const meta = log.metadata as { reviewId?: string } | null;
+        return Boolean(meta?.reviewId && reviewIds.has(meta.reviewId));
+      });
+
+      const pipelineStatus = await computeFeatureReviewStatus(
+        ctx.db,
+        input.featureRequestId,
+      );
+
+      return {
+        feature: fr,
+        pipelineStatus,
+        totalIterations: enriched.length,
+        byPullRequest,
+        timeline,
+        auditTrail: relatedAudit,
       };
     }),
 });

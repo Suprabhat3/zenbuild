@@ -336,10 +336,10 @@ export function ReviewPanel({
 
         {reviews.length > 0 && (
           <Link
-            href="/reviews"
+            href={`/feature-requests/${featureRequestId}/reviews`}
             className="text-primary inline-block text-sm font-medium hover:underline"
           >
-            View all reviews in workspace →
+            Full review history →
           </Link>
         )}
       </CardContent>

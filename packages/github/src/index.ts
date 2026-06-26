@@ -50,6 +50,7 @@ export {
 export {
   postPullRequestReview,
   formatReviewBody,
+  buildGithubReviewUrl,
   type GithubReviewEvent,
   type InlineReviewComment,
   type PostPullRequestReviewInput,
