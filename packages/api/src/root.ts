@@ -10,6 +10,7 @@ import { memberRouter } from "./routers/member";
 import { onboardingRouter } from "./routers/onboarding";
 import { prdRouter } from "./routers/prd";
 import { projectRouter } from "./routers/project";
+import { releaseRouter } from "./routers/release";
 import { reviewRouter } from "./routers/review";
 import { taskRouter } from "./routers/task";
 import { viewerRouter } from "./routers/viewer";
@@ -46,6 +47,7 @@ export const appRouter = createTRPCRouter({
   github: githubRouter,
   coding: codingRouter,
   review: reviewRouter,
+  release: releaseRouter,
   workflowRun: workflowRunRouter,
 });
 

@@ -26,7 +26,7 @@
 | 9 | AI Code Review | ✅ Done |
 | 10 | Fix Loop & Re-Review | ✅ Done |
 | 11 | Review History | ✅ Done |
-| 12 | Human Approval & Ship | ⬜ Not started |
+| 12 | Human Approval & Ship | ✅ Done |
 | 13 | Billing & Credits (Razorpay) | ⬜ Not started |
 | 14 | Polish, Observability & Deploy | ⬜ Not started |
 
@@ -476,6 +476,43 @@ example + rotate). `pnpm -r typecheck` green.
 3. **Decision**: human **Approve** or **Reject** (role-gated). Only approved features can move to `SHIPPED`. Approve → `APPROVED → SHIPPED` (optionally trigger PR merge via Octokit), reject → back to `FIX_NEEDED`/`IN_DEVELOPMENT`. All logged.
 
 **Done when:** A reviewer sees everything needed, the AI gives a readiness verdict, and only an explicit human approval can ship the feature.
+
+> **Status: ✅ Done.**
+> - **`packages/ai`** (`src/release/`): the release-readiness agent. `ReleaseReadinessSchema`
+>   (advisory verdict `READY | READY_WITH_RISKS | NOT_READY`, executive summary, PRD-coverage
+>   assessment, per-criterion status `MET/PARTIAL/UNMET/UNKNOWN` with evidence, outstanding
+>   concerns with severity, and a recommendation), `RELEASE_SYSTEM` + `buildReleasePrompt`
+>   (grounds on request + approved PRD markdown + tasks/AC + every linked PR's diff and latest
+>   review issues), and `assessReleaseReadiness` via `generateObject`. The verdict is explicitly
+>   **advisory** — it never gates the state machine.
+> - **`packages/github`** (`merge.ts`): `mergePullRequest` lands a PR as the App via the per-
+>   installation token. "GitHub said no" outcomes (conflicts, branch protection, failing checks,
+>   already-merged, 403/404) return `{ merged: false, reason }` so the caller can fall back to
+>   mark-shipped; only genuinely unexpected errors (5xx/network) propagate for retry.
+> - **`packages/jobs`**: `release/readiness.requested` (`release-readiness`, `retries: 2`) loads
+>   the approved PRD + tasks + linked PRs (with each PR's latest completed review), runs the agent,
+>   stores the verdict on `WorkflowRun.output`, and audit-logs `release.readiness`. It does **not**
+>   mutate feature state.
+> - **API** (`release` router): `summary` (consolidated approval-screen payload — PRD, tasks, PRs
+>   with latest review + open-issue counts, pipeline status, latest readiness verdict, existing
+>   decision, and the computed **hard gate**: IN_REVIEW + approved PRD + no unresolved blocking
+>   issues), `assessReadiness` (async trigger, dedups in-flight), `readinessStatus` (poll),
+>   `approve` (**`requireRole("owner","admin")`** — hard-gated, records an `APPROVED`
+>   `ReleaseDecision` with the readiness snapshot, **optionally merges** the open linked PR(s) via
+>   Octokit, then → `SHIPPED` when no open PRs remain else rests at `APPROVED`; audit-logs
+>   `feature.approve`/`feature.ship`), and `reject` (**role-gated**, required reason, records a
+>   `REJECTED` decision, → `FIX_NEEDED`, audit-logs `feature.reject`). All tenant-scoped.
+> - **Web**: dedicated approval screen at `/feature-requests/[id]/release` (`ReleaseApprovalView`)
+>   — decision banner, the human-approval gate with per-condition checklist, **Approve & ship**
+>   dialog (optional-merge toggle + squash/merge/rebase method + notes) and **Reject** dialog
+>   (required reason), the AI readiness report (verdict, PRD coverage, per-criterion status,
+>   concerns, recommendation) with assess/re-assess + live progress, outstanding issues, linked
+>   PRs, and PRD/task scope. A compact `ReleasePanel` on the feature-detail page surfaces the gate
+>   state + AI verdict and links to the screen. New `lib/release.ts` display helpers.
+> - **Verified**: `pnpm -r typecheck` green across all 10 packages; env-free release-schema smoke
+>   (valid/invalid verdict + AC status, min-length, enum values) 6/6. Live readiness requires
+>   `OPENAI_API_KEY` + the Inngest dev server; PR merge requires the `GITHUB_APP_*` env + a real
+>   installation.
 
 ---
 

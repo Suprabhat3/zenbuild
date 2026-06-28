@@ -4,6 +4,7 @@ import { githubPrSyncFn } from "./functions/githubPrSync";
 import { githubRepoBackfillFn } from "./functions/githubRepoBackfill";
 import { generatePrdFn } from "./functions/prdGenerate";
 import { prReviewFn } from "./functions/prReview";
+import { releaseReadinessFn } from "./functions/releaseReadiness";
 import { repoAnalyzeFn } from "./functions/repoAnalyze";
 import { taskImplementFn } from "./functions/taskImplement";
 import { generateTasksFn } from "./functions/tasksGenerate";
@@ -19,6 +20,7 @@ export {
   repoAnalyzeRequested,
   taskImplementRequested,
   prReviewRequested,
+  releaseReadinessRequested,
   CLARIFY_EVENT,
   PRD_EVENT,
   TASKS_EVENT,
@@ -28,6 +30,7 @@ export {
   REPO_ANALYZE_EVENT,
   TASK_IMPLEMENT_EVENT,
   PR_REVIEW_EVENT,
+  RELEASE_READINESS_EVENT,
   type DiscoveryEventData,
   type GithubPrSyncData,
   type GithubRepoBackfillData,
@@ -35,6 +38,7 @@ export {
   type RepoAnalyzeData,
   type TaskImplementData,
   type PrReviewData,
+  type ReleaseReadinessData,
 } from "./client";
 
 export { enqueuePrReview, shouldAutoReviewAfterSync } from "./triggerReview";
@@ -52,4 +56,5 @@ export const functions = [
   repoAnalyzeFn,
   taskImplementFn,
   prReviewFn,
+  releaseReadinessFn,
 ];

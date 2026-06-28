@@ -63,3 +63,26 @@ export {
   type PullRequestReviewContext,
   type PriorReviewContext,
 } from "./review/prompts";
+
+// --- Phase 12: release readiness -------------------------------------------
+export {
+  assessReleaseReadiness,
+  type ReleaseReadinessResult,
+} from "./release/release";
+export {
+  ReleaseReadinessSchema,
+  ReleaseVerdict,
+  AcceptanceCriterionStatus,
+  AcceptanceCriterionAssessmentSchema,
+  ReleaseConcernSchema,
+  type ReleaseReadiness,
+  type AcceptanceCriterionAssessment,
+  type ReleaseConcern,
+} from "./release/schemas";
+export {
+  RELEASE_SYSTEM,
+  RELEASE_VERDICT_LABELS,
+  buildReleasePrompt,
+  type ReleaseTaskContext,
+  type ReleasePullRequestContext,
+} from "./release/prompts";

@@ -129,6 +129,25 @@ export const prReviewRequested = eventType(PR_REVIEW_EVENT, {
 
 export type PrReviewData = z.infer<typeof prReviewData>;
 
+// --- Release readiness events (Phase 12) ------------------------------------
+
+/** Assess whether a feature is ready to ship (release.readiness). */
+const releaseReadinessData = z.object({
+  organizationId: z.string(),
+  featureRequestId: z.string(),
+  workflowRunId: z.string(),
+  /** "manual" | userId */
+  triggeredBy: z.string().optional(),
+});
+
+export const RELEASE_READINESS_EVENT = "release/readiness.requested";
+
+export const releaseReadinessRequested = eventType(RELEASE_READINESS_EVENT, {
+  schema: releaseReadinessData,
+});
+
+export type ReleaseReadinessData = z.infer<typeof releaseReadinessData>;
+
 export const inngest = new Inngest({
   id: "zenbuild",
   eventKey: serverEnv.INNGEST_EVENT_KEY,

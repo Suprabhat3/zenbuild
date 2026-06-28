@@ -56,3 +56,11 @@ export {
   type PostPullRequestReviewInput,
   type PostedPullRequestReview,
 } from "./reviews";
+
+export {
+  mergePullRequest,
+  type MergeMethod,
+  type MergePullRequestInput,
+  type MergePullRequestResult,
+  type MergeFailureReason,
+} from "./merge";

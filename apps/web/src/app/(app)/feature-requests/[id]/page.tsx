@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { DiscoveryPanel, type ClarificationMessageView } from "@/components/app/discovery-panel";
 import { FixNeededPanel } from "@/components/app/fix-needed-panel";
 import { PlanningPanel } from "@/components/app/planning-panel";
+import { ReleasePanel } from "@/components/app/release-panel";
 import { ReviewPanel } from "@/components/app/review-panel";
 import { PrdEditor, type PrdContent } from "@/components/app/prd-editor";
 import { Badge } from "@/components/ui/badge";
@@ -131,6 +132,8 @@ export default async function FeatureRequestDetailPage({
           />
 
           <ReviewPanel featureRequestId={request.id} status={status} />
+
+          <ReleasePanel featureRequestId={request.id} status={status} />
         </div>
 
         <div className="space-y-6">
