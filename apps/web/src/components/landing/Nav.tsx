@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
-import { LogoMark } from "./icons";
 import { authClient } from "@/lib/auth-client";
 
 export function Nav() {
@@ -22,7 +22,14 @@ export function Nav() {
     <nav className={`nav ${scrolled ? "scrolled" : ""}`}>
       <div className="wrap nav-inner">
         <a href="#top" className="logo" aria-label="ZenBuild home">
-          <LogoMark />
+          <Image
+            src="/logo.png"
+            alt=""
+            width={28}
+            height={28}
+            priority
+            className="logo-img"
+          />
           ZenBuild
         </a>
 

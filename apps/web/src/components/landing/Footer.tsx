@@ -1,4 +1,5 @@
-import { LogoMark, GitHub } from "./icons";
+import Image from "next/image";
+import { GitHub } from "./icons";
 
 const COLUMNS = [
   {
@@ -34,7 +35,13 @@ export function Footer() {
         <div className="footer-grid">
           <div>
             <div className="logo">
-              <LogoMark size={26} />
+              <Image
+                src="/logo.png"
+                alt=""
+                width={26}
+                height={26}
+                className="logo-img"
+              />
               ZenBuild
             </div>
             <p className="footer-tag">

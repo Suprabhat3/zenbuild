@@ -1,5 +1,5 @@
+import Image from "next/image";
 import { Reveal } from "./Reveal";
-import { LogoMark } from "./icons";
 import { LandingCta } from "./LandingCta";
 
 export function FinalCta() {
@@ -7,7 +7,7 @@ export function FinalCta() {
     <section className="cta">
       <div className="wrap">
         <Reveal className="cta-panel">
-          <LogoMark size={48} />
+          <Image src="/logo.png" alt="ZenBuild" width={48} height={48} />
           <h2 className="display" style={{ marginTop: 18 }}>
             Bring calm to how you <em>ship</em>.
           </h2>
