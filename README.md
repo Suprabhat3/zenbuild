@@ -323,7 +323,9 @@ Full reference with comments lives in [`.env.example`](.env.example). Summary:
 ## Deployment
 
 Target: **Vercel** (web + route handlers) · **Neon** (Postgres) · **Inngest
-Cloud** (async) · **GitHub App** (prod) · **Razorpay** (test keys).
+Cloud** (async) · **GitHub App** (prod) · **Razorpay** (test keys). A
+step-by-step runbook (exact Vercel settings, env vars, webhook URLs, smoke test)
+lives in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 1. **Database:** create a Neon project, copy the pooled connection string into
    `DATABASE_URL`, and run `pnpm --filter @zenbuild/db db:migrate:deploy`.

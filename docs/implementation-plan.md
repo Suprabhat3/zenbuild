@@ -28,7 +28,7 @@
 | 11 | Review History | ✅ Done |
 | 12 | Human Approval & Ship | ✅ Done |
 | 13 | Billing & Credits (Razorpay) | ✅ Done |
-| 14 | Polish, Observability & Deploy | ⬜ Not started |
+| 14 | Polish, Observability & Deploy | 🚧 In progress (polish + docs done; deploy pending) |
 
 > Legend: ✅ Done · 🚧 In progress · ⬜ Not started. Keep this table and the per-phase
 > "Status" lines in sync as work lands.
@@ -601,6 +601,30 @@ example + rotate). `pnpm -r typecheck` green.
    - **README** including: project overview, tech stack, architecture, setup instructions, environment variables, database schema notes, GitHub integration setup, Inngest workflow explanation, AI features implemented.
 
 **Done when:** Live URL works end-to-end (request → ship), repo is public, README is complete, demo video recorded.
+
+> **Status: 🚧 In progress.**
+> - **Landing polish**: new auth-aware `LandingCta` client component — every
+>   marketing CTA (Hero, FinalCta, Pricing) becomes **"Go to dashboard"** /
+>   **"Go to billing"** when a visitor is already signed in (the Nav already did
+>   this). Pricing rewritten to the real **3-tier** catalog (Free ₹0/25cr/1repo,
+>   Pro ₹999/200cr/5repos, Team ₹2,499/500cr/25repos) sourced from
+>   `packages/billing/src/plans.ts`, with the eligibility note and a 3-column
+>   responsive grid (`.plans-3`).
+> - **Docs (mandatory deliverable)**: comprehensive root [`README.md`](../README.md)
+>   (overview, core loop, tech stack, architecture diagram, monorepo layout, data
+>   model + state machine, AI features table, every Inngest workflow, GitHub App
+>   setup, Razorpay billing/credits, local setup, full env-var reference, deploy
+>   summary) + a detailed [`DEPLOYMENT.md`](../DEPLOYMENT.md) runbook.
+> - **Deploy prep**: fixed the #1 deploy blocker — the gitignored Prisma client now
+>   regenerates on every install via a `postinstall: prisma generate` in
+>   `packages/db` (verified with a clean `pnpm install --frozen-lockfile`). Added
+>   `RESEND_API_KEY`/`EMAIL_FROM` to `turbo.json` `globalEnv` for cache correctness.
+> - **Verified**: `pnpm typecheck` green across all 10 packages; `pnpm --filter web
+>   build` succeeds (landing prerenders static).
+> - **Remaining**: provision prod services (Vercel/Neon/Inngest Cloud/GitHub
+>   App/Razorpay) per `DEPLOYMENT.md`, then fill the live URL + demo video into the
+>   README. Deferred standards backlog: automated test suite (Vitest/Playwright),
+>   Sentry wiring, per-package READMEs.
 
 ---
 
