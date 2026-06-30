@@ -1,5 +1,6 @@
 import { Reveal } from "./Reveal";
-import { ArrowRight, LogoMark } from "./icons";
+import { LogoMark } from "./icons";
+import { LandingCta } from "./LandingCta";
 
 export function FinalCta() {
   return (
@@ -15,10 +16,7 @@ export function FinalCta() {
             ZenBuild gives your team one clear, reviewable path to production.
           </p>
           <div className="hero-actions">
-            <a href="/sign-up" className="btn btn-accent">
-              Start building free
-              <ArrowRight size={18} />
-            </a>
+            <LandingCta />
             <a href="#product" className="btn btn-ghost">
               Explore the product
             </a>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight, CheckCircle } from "./icons";
+import { CheckCircle } from "./icons";
+import { LandingCta } from "./LandingCta";
 
 const STEPS = [
   { label: "Request", state: "done" },
@@ -47,10 +48,7 @@ export function Hero() {
         </p>
 
         <div className="hero-actions">
-          <a href="/sign-up" className="btn btn-accent">
-            Start building free
-            <ArrowRight size={18} />
-          </a>
+          <LandingCta />
           <a href="#process" className="btn btn-ghost">
             See how it works
           </a>

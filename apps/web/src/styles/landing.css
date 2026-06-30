@@ -774,6 +774,9 @@ html {
   gap: 22px;
   align-items: stretch;
 }
+.plans.plans-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
 .plan {
   position: relative;
   background: var(--paper);
@@ -1006,7 +1009,8 @@ html {
   .note {
     flex: 1 1 220px;
   }
-  .plans {
+  .plans,
+  .plans.plans-3 {
     grid-template-columns: 1fr;
   }
   .footer-grid {
