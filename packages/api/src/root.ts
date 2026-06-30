@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { billingRouter } from "./routers/billing";
 import { clarificationRouter } from "./routers/clarification";
 import { codingRouter } from "./routers/coding";
 import { dashboardRouter } from "./routers/dashboard";
@@ -48,6 +49,7 @@ export const appRouter = createTRPCRouter({
   coding: codingRouter,
   review: reviewRouter,
   release: releaseRouter,
+  billing: billingRouter,
   workflowRun: workflowRunRouter,
 });
 

@@ -27,7 +27,7 @@
 | 10 | Fix Loop & Re-Review | ✅ Done |
 | 11 | Review History | ✅ Done |
 | 12 | Human Approval & Ship | ✅ Done |
-| 13 | Billing & Credits (Razorpay) | ⬜ Not started |
+| 13 | Billing & Credits (Razorpay) | ✅ Done |
 | 14 | Polish, Observability & Deploy | ⬜ Not started |
 
 > Legend: ✅ Done · 🚧 In progress · ⬜ Not started. Keep this table and the per-phase
@@ -526,6 +526,64 @@ example + rotate). `pnpm -r typecheck` green.
 4. **Billing UI**: current plan, usage (credits/repos/seats), upgrade/downgrade, invoices.
 
 **Done when:** An org can subscribe via Razorpay test, plan limits are enforced (repos, credits, premium features), and webhooks keep subscription state in sync.
+
+> **Status: ✅ Done.**
+> - **`packages/billing`** (new): the server-authoritative billing core, with
+>   graceful degradation mirroring the GitHub App (works fully unconfigured;
+>   `isRazorpayConfigured()` gates the paid paths). `plans.ts` — the single source
+>   of truth for what each tier *grants* (monthly AI credits, repo limit, seats,
+>   premium-feature flags, INR price, Razorpay plan id from env) plus
+>   account-type eligibility and the `PlanLimitError`. `credits.ts` — a two-phase
+>   credit model: **gate at trigger** (`assertCanRunWorkflow`, a cheap read that
+>   blocks an op + surfaces an upsell) and **debit on success** (`meterWorkflowRun`,
+>   idempotent on the workflow-run id so failed/retried runs never charge), with a
+>   per-workflow cost map (`PR_REVIEW` 2, `TASK_IMPLEMENT` 3, others 1; CLARIFY
+>   free), `getCreditState`/`hasCreditsFor`, `grantPlanCredits` (monthly reset),
+>   and `InsufficientCreditsError`. `razorpay.ts` — lazily-constructed client +
+>   subscription create/cancel/fetch. `webhook.ts` — timing-safe HMAC-SHA256
+>   verification for both the webhook body and the Checkout callback signature.
+>   `subscription.ts` — webhook→DB reconciliation that's **idempotent by
+>   construction** (sets plan/status/credits rather than incrementing, so Razorpay's
+>   at-least-once delivery converges).
+> - **Credit enforcement** wired into the real chokepoints: `meterWorkflowRun` runs
+>   inside `markCompleted` (so every successful AI run is metered exactly once,
+>   across both tRPC-triggered and webhook-triggered work); the user-initiated
+>   mutations (`prd.generate`, `task.generate`, `coding.implement`/`analyzeRepo`,
+>   `release.assessReadiness`, `review.trigger`) gate up front via `guardWorkflowCredits`;
+>   the webhook auto-review skips with `out-of-credits` rather than silently
+>   overspending. Repo-count limit enforced on `github.connect`; AI release-readiness
+>   gated as a premium feature (Free keeps the manual approval gate, the AI verdict is
+>   the upsell). The tRPC error formatter surfaces a structured `billingError`
+>   (`INSUFFICIENT_CREDITS` / `PLAN_LIMIT`) so the client can render an upgrade CTA.
+> - **API** (`billing` router): `summary` (plan, status, credits/repos/seats usage,
+>   upgrade options), `plans`, `ledger` (credit-activity feed), `createSubscription`
+>   (owner/admin — mints a Razorpay subscription + persists the pending id for webhook
+>   resolution), `verifyPayment` (verifies the Checkout signature and optimistically
+>   activates; webhook reconciles authoritatively), and `cancel` (at cycle end or
+>   immediate). All audit-logged. Onboarding's `api/plans.ts` now re-exports the
+>   billing catalog (one source of truth for the granted-credits value).
+> - **Webhook** `POST /api/razorpay/webhook`: verifies the signature over the raw
+>   body, reconciles `subscription.*` events (activated/charged/resumed → ACTIVE +
+>   credit grant; cancelled/completed/expired → CANCELLED + downgrade to FREE;
+>   pending/halted → PAST_DUE; paused → PAUSED), and writes an `AuditLog` row per
+>   processed event.
+> - **Web**: top-level **Billing** page (`/billing`, already in the sidebar) —
+>   current-plan card with status + renewal/cancel, live usage meters (credits with a
+>   low-balance warning, repos, seats), a plan-comparison grid with per-tier feature
+>   lists and **Upgrade** buttons that drive Razorpay Checkout (loaded on demand via
+>   `lib/razorpay-checkout.ts`) → `verifyPayment`, a cancel-confirmation dialog, and a
+>   credit-activity table. Owners/admins manage; members get a read-only view. Degrades
+>   to an "unconfigured" notice when Razorpay env is unset. `lib/billing.ts` holds the
+>   display helpers.
+> - **Verified**: `pnpm -r typecheck` green across all 11 packages; env-free billing-core
+>   smoke (credit cost map incl. free CLARIFY, plan catalog, account eligibility,
+>   timing-safe webhook + Checkout signatures incl. tamper/swap rejection, Razorpay
+>   status mapping, plan-id resolution) 25/25. Live checkout/webhooks require the
+>   `RAZORPAY_*` env (keys, webhook secret, per-tier plan ids) + a Razorpay test account.
+> - **Note**: no schema migration was needed — the `Subscription`/`CreditLedger`/
+>   `PlanTier`/`CreditReason` models shipped in the Phase-1 `init` migration. Webhook
+>   idempotency relies on the reconciliation being set-based (not a unique constraint).
+>   Clarification stays free (it has no `CreditReason`); credits meter the six heavy ops.
 
 ---
 

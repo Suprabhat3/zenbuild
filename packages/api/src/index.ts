@@ -19,4 +19,8 @@ export {
   GITHUB_SIGNATURE_HEADER,
   GITHUB_DELIVERY_HEADER,
 } from "./lib/githubWebhook";
+export {
+  handleRazorpayWebhook,
+  RAZORPAY_SIGNATURE_HEADER,
+} from "./lib/razorpayWebhook";
 export { completeGithubInstallation } from "./lib/githubInstall";

@@ -1,3 +1,4 @@
+import { meterWorkflowRun } from "@zenbuild/billing";
 import { db } from "@zenbuild/db";
 import type { Prisma } from "@zenbuild/db";
 
@@ -40,15 +41,22 @@ export async function markCompleted(
   workflowRunId: string,
   output: Prisma.InputJsonValue,
 ) {
-  await db.workflowRun.update({
-    where: { id: workflowRunId },
-    data: {
-      status: "COMPLETED",
-      progress: 100,
-      step: "Done",
-      output,
-      finishedAt: new Date(),
-    },
+  // Mark complete and meter credits together: a successful AI run is the single
+  // point at which the org is charged, so failed/abandoned runs cost nothing.
+  // `meterWorkflowRun` is idempotent on the run id, so a step replay is safe.
+  await db.$transaction(async (tx) => {
+    const run = await tx.workflowRun.update({
+      where: { id: workflowRunId },
+      data: {
+        status: "COMPLETED",
+        progress: 100,
+        step: "Done",
+        output,
+        finishedAt: new Date(),
+      },
+      select: { id: true, type: true, organizationId: true },
+    });
+    await meterWorkflowRun(tx, run);
   });
 }
 

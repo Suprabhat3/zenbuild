@@ -1,4 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
+import { InsufficientCreditsError, PlanLimitError } from "@zenbuild/billing";
 import superjson from "superjson";
 import { z, ZodError } from "zod";
 
@@ -7,6 +8,21 @@ import type { Context } from "./context";
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
+    const cause = error.cause;
+    // Structured billing upsell: lets the client distinguish "out of credits" /
+    // "plan limit" from generic FORBIDDEN and render an upgrade CTA.
+    const billingError =
+      cause instanceof InsufficientCreditsError
+        ? {
+            type: "INSUFFICIENT_CREDITS" as const,
+            plan: cause.plan,
+            remaining: cause.remaining,
+            required: cause.required,
+          }
+        : cause instanceof PlanLimitError
+          ? { type: "PLAN_LIMIT" as const, plan: cause.plan, kind: cause.kind }
+          : null;
+
     return {
       ...shape,
       data: {
@@ -15,6 +31,7 @@ const t = initTRPC.context<Context>().create({
           error.cause instanceof ZodError
             ? z.flattenError(error.cause)
             : null,
+        billingError,
       },
     };
   },

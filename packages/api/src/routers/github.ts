@@ -9,6 +9,7 @@ import {
 import { githubRepoBackfillRequested, inngest } from "@zenbuild/jobs";
 import { z } from "zod";
 
+import { guardRepoLimit } from "../lib/billingGuards";
 import { triggerRepoAnalyze } from "../lib/coding";
 import { createTRPCRouter, orgProcedure, requireRole } from "../trpc";
 
@@ -207,6 +208,16 @@ export const githubRouter = createTRPCRouter({
           message: "That repository is already connected.",
         });
       }
+
+      // Plan gate: enforce the connected-repo limit for the org's plan.
+      const [sub, repoCount] = await Promise.all([
+        ctx.db.subscription.findUnique({
+          where: { organizationId: ctx.organizationId },
+          select: { plan: true },
+        }),
+        ctx.db.repository.count({ where: { organizationId: ctx.organizationId } }),
+      ]);
+      if (sub) guardRepoLimit(sub.plan, repoCount);
 
       const repository = await ctx.db.$transaction(async (tx) => {
         const created = await tx.repository.create({

@@ -50,10 +50,15 @@ const serverSchema = z.object({
   INNGEST_EVENT_KEY: z.string().optional(),
   INNGEST_SIGNING_KEY: z.string().optional(),
 
-  // Phase 13 — Razorpay (test)
+  // Phase 13 — Razorpay (test). Plan ids are the test-mode subscription plan
+  // ids created in the Razorpay dashboard (one per paid tier); when unset the
+  // matching tier can't be subscribed to and the billing UI degrades to an
+  // "unconfigured" state, mirroring the GitHub App.
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  RAZORPAY_PLAN_ID_PRO: z.string().optional(),
+  RAZORPAY_PLAN_ID_TEAM: z.string().optional(),
 
   // Phase 14 — observability
   SENTRY_DSN: z.string().optional(),

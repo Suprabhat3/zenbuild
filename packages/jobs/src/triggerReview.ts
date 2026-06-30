@@ -1,3 +1,4 @@
+import { hasCreditsFor, workflowCreditCost } from "@zenbuild/billing";
 import { db } from "@zenbuild/db";
 
 import { inngest, prReviewRequested } from "./client";
@@ -70,6 +71,12 @@ export async function shouldAutoReviewAfterSync(args: {
   });
   if (inflight) {
     return { enqueue: false, skipReason: "review-in-flight" };
+  }
+
+  // Plan gate: don't auto-burn an AI review when the org is out of credits.
+  // Manual "Review now" surfaces an upsell instead (handled at the API layer).
+  if (!(await hasCreditsFor(db, args.organizationId, workflowCreditCost("PR_REVIEW")))) {
+    return { enqueue: false, skipReason: "out-of-credits" };
   }
 
   if (!args.force && args.headSha) {

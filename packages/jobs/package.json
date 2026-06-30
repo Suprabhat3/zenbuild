@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@zenbuild/ai": "workspace:*",
+    "@zenbuild/billing": "workspace:*",
     "@zenbuild/db": "workspace:*",
     "@zenbuild/env": "workspace:*",
     "@zenbuild/github": "workspace:*",

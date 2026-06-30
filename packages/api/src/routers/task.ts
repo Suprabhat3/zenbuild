@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { rankBetween } from "@zenbuild/db";
 import { z } from "zod";
 
+import { guardWorkflowCredits } from "../lib/billingGuards";
 import { triggerTaskGeneration } from "../lib/discovery";
 import { createTRPCRouter, orgProcedure, requireRole } from "../trpc";
 
@@ -193,6 +194,8 @@ export const taskRouter = createTRPCRouter({
               : `Cannot generate tasks from ${fr.status}.`,
         });
       }
+
+      await guardWorkflowCredits(ctx.db, ctx.organizationId, "TASKS_GENERATE");
 
       const run = await triggerTaskGeneration(ctx.db, {
         organizationId: ctx.organizationId,

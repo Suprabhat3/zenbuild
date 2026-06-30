@@ -3,6 +3,7 @@ import { isGithubConfigured, buildGithubReviewUrl } from "@zenbuild/github";
 import { computeFeatureReviewStatus, shouldAutoReviewAfterSync } from "@zenbuild/jobs";
 import { z } from "zod";
 
+import { guardWorkflowCredits } from "../lib/billingGuards";
 import { triggerPrReview } from "../lib/review";
 import { enrichReviewRow, resolveReviewTriggerLabel } from "../lib/reviewHelpers";
 import { createTRPCRouter, orgProcedure } from "../trpc";
@@ -292,6 +293,8 @@ export const reviewRouter = createTRPCRouter({
           message: "A review is already in progress for this pull request.",
         });
       }
+
+      await guardWorkflowCredits(ctx.db, ctx.organizationId, "PR_REVIEW");
 
       const run = await triggerPrReview(ctx.db, {
         organizationId: ctx.organizationId,

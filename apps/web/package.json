@@ -21,6 +21,7 @@
     "@trpc/server": "^11.18.0",
     "@zenbuild/api": "workspace:*",
     "@zenbuild/auth": "workspace:*",
+    "@zenbuild/billing": "workspace:*",
     "@zenbuild/db": "workspace:*",
     "@zenbuild/env": "workspace:*",
     "@zenbuild/jobs": "workspace:*",

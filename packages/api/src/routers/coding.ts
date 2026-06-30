@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { isGithubConfigured } from "@zenbuild/github";
 import { z } from "zod";
 
+import { guardWorkflowCredits } from "../lib/billingGuards";
 import { triggerRepoAnalyze, triggerTaskImplement } from "../lib/coding";
 import { createTRPCRouter, orgProcedure, requireRole } from "../trpc";
 
@@ -135,6 +136,8 @@ export const codingRouter = createTRPCRouter({
         });
       }
 
+      await guardWorkflowCredits(ctx.db, ctx.organizationId, "TASK_IMPLEMENT");
+
       const run = await triggerTaskImplement(ctx.db, {
         organizationId: ctx.organizationId,
         featureRequestId: task.featureRequestId,
@@ -169,6 +172,8 @@ export const codingRouter = createTRPCRouter({
           message: "Repository has no active GitHub installation.",
         });
       }
+
+      await guardWorkflowCredits(ctx.db, ctx.organizationId, "REPO_ANALYZE");
 
       const run = await triggerRepoAnalyze(ctx.db, {
         organizationId: ctx.organizationId,

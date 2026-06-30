@@ -9,6 +9,7 @@ import {
 import { computeFeatureReviewStatus } from "@zenbuild/jobs";
 import { z } from "zod";
 
+import { guardOrgFeature, guardWorkflowCredits } from "../lib/billingGuards";
 import { triggerReleaseReadiness } from "../lib/release";
 import { createTRPCRouter, orgProcedure, requireRole } from "../trpc";
 
@@ -282,6 +283,16 @@ export const releaseRouter = createTRPCRouter({
           message: "A release assessment is already in progress.",
         });
       }
+
+      // Premium feature + credit gates (advisory verdict; the manual approval
+      // gate still works on the Free plan, the AI readiness check is the upsell).
+      await guardOrgFeature(
+        ctx.db,
+        ctx.organizationId,
+        "releaseReadiness",
+        "AI release-readiness checks",
+      );
+      await guardWorkflowCredits(ctx.db, ctx.organizationId, "RELEASE_READINESS");
 
       const run = await triggerReleaseReadiness(ctx.db, {
         organizationId: ctx.organizationId,

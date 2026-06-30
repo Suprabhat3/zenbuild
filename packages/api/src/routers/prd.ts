@@ -8,6 +8,7 @@ import {
 } from "@zenbuild/ai";
 import { z } from "zod";
 
+import { guardWorkflowCredits } from "../lib/billingGuards";
 import { triggerPrdGeneration } from "../lib/discovery";
 import { loadRequestContext } from "../lib/prdContext";
 import { createTRPCRouter, orgProcedure, requireRole } from "../trpc";
@@ -93,6 +94,8 @@ export const prdRouter = createTRPCRouter({
           message: `Cannot generate a PRD from ${fr.status}. Run clarification first.`,
         });
       }
+
+      await guardWorkflowCredits(ctx.db, ctx.organizationId, "PRD_GENERATE");
 
       const run = await triggerPrdGeneration(ctx.db, {
         organizationId: ctx.organizationId,
