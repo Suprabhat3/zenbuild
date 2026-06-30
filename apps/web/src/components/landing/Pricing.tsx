@@ -33,7 +33,7 @@ const PLANS = [
     amount: "₹999",
     per: "/ month",
     pop: true,
-    cta: "Upgrade with Razorpay",
+    cta: "Upgrade to Pro",
     ctaClass: "btn-accent",
     features: [
       "Personal workspace",
@@ -49,7 +49,7 @@ const PLANS = [
     amount: "₹2,499",
     per: "/ month",
     pop: false,
-    cta: "Upgrade with Razorpay",
+    cta: "Choose Team",
     ctaClass: "btn-ghost",
     features: [
       "Unlimited workspace members",
