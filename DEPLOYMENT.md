@@ -9,6 +9,9 @@ fails; everything else degrades gracefully if skipped.
 
 ---
 
+> **Status: deployed and live at https://zenbuild.zenscail.com/.** This runbook
+> is kept as the reference for re-provisioning or standing up a new environment.
+
 ## 0. Prerequisites
 
 - The GitHub repo is **public** and pushed (mandatory deliverable). ✅
@@ -180,8 +183,7 @@ Walk the core loop on the live URL:
 ## 8. Final deliverables checklist
 
 - [x] Public GitHub repo (pushed)
-- [ ] Live deployed URL — add it to [`README.md`](README.md)
-- [ ] Demo video of the full core loop — add the link to `README.md`
+- [x] Live deployed URL — https://zenbuild.zenscail.com/
 - [x] Complete README (overview, stack, architecture, setup, env, schema,
       GitHub setup, Inngest workflows, AI features)
-- [ ] Production env vars + webhook URLs configured (this runbook)
+- [x] Production env vars + webhook URLs configured (this runbook)

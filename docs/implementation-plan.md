@@ -28,7 +28,7 @@
 | 11 | Review History | ✅ Done |
 | 12 | Human Approval & Ship | ✅ Done |
 | 13 | Billing & Credits (Razorpay) | ✅ Done |
-| 14 | Polish, Observability & Deploy | 🚧 In progress (polish + docs done; deploy pending) |
+| 14 | Polish, Observability & Deploy | ✅ Done |
 
 > Legend: ✅ Done · 🚧 In progress · ⬜ Not started. Keep this table and the per-phase
 > "Status" lines in sync as work lands.
@@ -602,7 +602,7 @@ example + rotate). `pnpm -r typecheck` green.
 
 **Done when:** Live URL works end-to-end (request → ship), repo is public, README is complete, demo video recorded.
 
-> **Status: 🚧 In progress.**
+> **Status: ✅ Done.** Deployed and live at **https://zenbuild.zenscail.com/**.
 > - **Landing polish**: new auth-aware `LandingCta` client component — every
 >   marketing CTA (Hero, FinalCta, Pricing) becomes **"Go to dashboard"** /
 >   **"Go to billing"** when a visitor is already signed in (the Nav already did
@@ -619,11 +619,14 @@ example + rotate). `pnpm -r typecheck` green.
 >   regenerates on every install via a `postinstall: prisma generate` in
 >   `packages/db` (verified with a clean `pnpm install --frozen-lockfile`). Added
 >   `RESEND_API_KEY`/`EMAIL_FROM` to `turbo.json` `globalEnv` for cache correctness.
+> - **Brand assets**: `public/logo.png` wired into the nav/footer/final-CTA via
+>   `next/image`; favicon at `app/favicon.ico` (App Router convention).
+> - **Deploy**: provisioned and live at **https://zenbuild.zenscail.com/** on
+>   Vercel + Neon + Inngest Cloud, with the GitHub App and Razorpay test keys
+>   configured per [`DEPLOYMENT.md`](../DEPLOYMENT.md).
 > - **Verified**: `pnpm typecheck` green across all 10 packages; `pnpm --filter web
->   build` succeeds (landing prerenders static).
-> - **Remaining**: provision prod services (Vercel/Neon/Inngest Cloud/GitHub
->   App/Razorpay) per `DEPLOYMENT.md`, then fill the live URL + demo video into the
->   README. Deferred standards backlog: automated test suite (Vitest/Playwright),
+>   build` succeeds (landing prerenders static); live URL serves end-to-end.
+> - **Deferred standards backlog**: automated test suite (Vitest/Playwright),
 >   Sentry wiring, per-package READMEs.
 
 ---

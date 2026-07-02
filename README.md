@@ -13,8 +13,7 @@ reaches production on the AI's word alone.
 
 </div>
 
-> **Live demo:** _add your Vercel URL here_
-> **Demo video:** _add your video link here_
+> **Live demo:** https://zenbuild.zenscail.com/
 
 ---
 
@@ -347,9 +346,10 @@ lives in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 Built phase-by-phase to an industry-grade-SaaS bar — see
 [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full plan
-and per-phase notes. Phases 1–13 (auth, multi-tenancy, intake, discovery, PRD,
-planning, GitHub, coding agent, AI review, fix loop, review history, human
-approval, billing) are complete; Phase 14 (polish, docs, deploy) is in progress.
+and per-phase notes. All 14 phases are complete — auth, multi-tenancy, intake,
+discovery, PRD, planning, GitHub, coding agent, AI review, fix loop, review
+history, human approval, billing, and polish/docs/deploy — and the app is live
+at [zenbuild.zenscail.com](https://zenbuild.zenscail.com/).
 
 ---
 
