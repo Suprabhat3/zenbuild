@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Inbox, GitBranch } from "lucide-react";
+import { ArrowLeft, Inbox, GitBranch, Plus } from "lucide-react";
 import { TRPCError } from "@trpc/server";
 
+import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
+import { ProjectDetailActions } from "@/components/app/project-detail-actions";
 import { RepoConnectCard } from "@/components/app/repo-connect-card";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/app/stat-card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -64,6 +67,15 @@ export default async function ProjectDetailPage({
           </span>
         }
         description={project.description ?? undefined}
+        actions={
+          <ProjectDetailActions
+            project={{
+              id: project.id,
+              name: project.name,
+              description: project.description,
+            }}
+          />
+        }
       />
 
       <div className="app-stat-grid sm:grid-cols-2 lg:grid-cols-2">
@@ -91,9 +103,22 @@ export default async function ProjectDetailPage({
         </CardHeader>
         <CardContent>
           {requests.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No feature requests in this project yet.
-            </p>
+            <EmptyState
+              icon={Inbox}
+              title="No feature requests yet"
+              description="Capture the first request for this project to kick off the delivery loop."
+              action={
+                <Button
+                  className="gap-1.5"
+                  render={
+                    <Link href={`/feature-requests?new=1&projectId=${id}`} />
+                  }
+                >
+                  <Plus className="size-4" />
+                  New feature request
+                </Button>
+              }
+            />
           ) : (
             <ul>
               {requests.map((r) => (

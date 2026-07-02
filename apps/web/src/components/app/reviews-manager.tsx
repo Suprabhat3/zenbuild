@@ -2,17 +2,12 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ExternalLink, Filter } from "lucide-react";
+import { ExternalLink, Filter, SearchX } from "lucide-react";
 
+import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -52,6 +47,7 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
   );
 
   const reviews = query.data ?? initialReviews;
+  const hasFilters = severity !== ALL || verdict !== ALL;
 
   const counts = useMemo(
     () => ({
@@ -70,7 +66,7 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
             Filters
           </div>
           <Select value={severity} onValueChange={(v) => setSeverity(v ?? ALL)}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-40">
               <SelectValue placeholder="Severity" />
             </SelectTrigger>
             <SelectContent>
@@ -80,7 +76,7 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
             </SelectContent>
           </Select>
           <Select value={verdict} onValueChange={(v) => setVerdict(v ?? ALL)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-45">
               <SelectValue placeholder="Verdict" />
             </SelectTrigger>
             <SelectContent>
@@ -90,7 +86,7 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
               <SelectItem value="COMMENT">Comment</SelectItem>
             </SelectContent>
           </Select>
-          {(severity !== ALL || verdict !== ALL) && (
+          {hasFilters && (
             <Button
               variant="ghost"
               size="sm"
@@ -110,14 +106,31 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
       </div>
 
       {reviews.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No matching reviews</CardTitle>
-            <CardDescription>
-              Try clearing filters, or run a review from a feature request.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="app-panel">
+          <EmptyState
+            icon={SearchX}
+            title={hasFilters ? "No matching reviews" : "No reviews yet"}
+            description={
+              hasFilters
+                ? "No reviews match the current filters. Clear them to see the full history."
+                : "AI code reviews will appear here once a pull request is reviewed from a feature request."
+            }
+            action={
+              hasFilters ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSeverity(ALL);
+                    setVerdict(ALL);
+                  }}
+                >
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
+        </div>
       ) : (
         <ul className="space-y-3">
           {reviews.map((review) => {
@@ -152,7 +165,7 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
                       {review.featureRequest && (
                         <Link
                           href={`/feature-requests/${review.featureRequest.id}/reviews`}
-                          className="block font-semibold hover:underline"
+                          className="hover:text-primary block font-(family-name:--font-display) text-lg tracking-tight transition-colors"
                         >
                           {review.featureRequest.title}
                         </Link>
@@ -162,6 +175,7 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
                           href={review.pullRequest.url}
                           target="_blank"
                           rel="noopener noreferrer"
+                          aria-label={`Open pull request ${review.pullRequest.repository.fullName} #${review.pullRequest.number} on GitHub`}
                           className="text-muted-foreground inline-flex items-center gap-1 text-sm hover:text-foreground"
                         >
                           {review.pullRequest.repository.fullName} #
@@ -192,6 +206,7 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
                           href={review.githubReviewUrl}
                           target="_blank"
                           rel="noopener noreferrer"
+                          aria-label="Open the review comment on GitHub"
                           className="text-muted-foreground inline-flex items-center gap-1 text-xs hover:text-foreground"
                         >
                           GitHub comment

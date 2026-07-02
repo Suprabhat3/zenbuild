@@ -20,7 +20,8 @@
 |-------|-------|--------|
 | 1 | Stabilize: fix what's broken | ✅ Done |
 | 2 | Full core-loop QA walkthrough | 🚧 In progress |
-| 3 | Structural UX: loading, error, 404, mobile nav | 🚧 In progress |
+| 3 | Structural UX: loading, error, 404, mobile nav | ✅ Done |
+| 3.5 | **Navigation redesign: pipeline-first UX** (owner request, 2026-07-02) | 🚧 In progress |
 
 ### Phase 2 QA findings (fixed as found)
 
@@ -139,6 +140,36 @@ URLs render branded screens; the full app is navigable on a phone.
 
 ---
 
+# Phase 3.5 — Navigation redesign: pipeline-first UX
+
+**Goal (owner request, 2026-07-02):** redesign the frontend around what the
+backend can actually do — the delivery pipeline — instead of a collection of
+disconnected pages. "User can easily do the things, easy access to the primary
+things."
+
+**The organizing idea:** `FeatureRequest.status` is the spine of the product
+(Intake → Discovery → PRD → Plan → Build → Review → Ship, with three human
+gates). Every status now maps to a **stage** and a single **next action**
+(`apps/web/src/lib/feature-request.ts`: `PIPELINE_STAGES`, `STATUS_STAGE_INDEX`,
+`NEXT_ACTION`) — and that one model drives the stepper, the dashboard queue,
+and the approvals inbox.
+
+| # | Change | Files |
+|---|--------|-------|
+| 3.5.1 | **Feature-request workspace**: shared layout with persistent header + **pipeline stepper** (7 stages, next-action CTA banner) + tab bar (Overview · Tasks · Reviews · Ship) across all four surfaces; sub-pages stripped of duplicated headers; raw intake-payload JSON demoted to a collapsible | `feature-requests/[id]/layout.tsx` (new), `pipeline-stepper.tsx`, `feature-request-tabs.tsx` (new); `[id]/{page,board,reviews,release}/page.tsx` |
+| 3.5.2 | **Actionable dashboard**: "Needs your attention" queue (requests blocked on a human, urgency-ordered, deep-links to the right stage), clickable stat cards, pipeline chips filter the request list, in-flight runs link to their request, run types humanized | `dashboard/page.tsx`, `stat-card.tsx` (href prop) |
+| 3.5.3 | **Approvals = decision inbox**: one group per human gate (ship decisions, approved-unshipped, blocked on fixes, plan sign-off, PRD sign-off), each row deep-links to its decision surface | `approvals/page.tsx` |
+| 3.5.4 | **Mobile navigation**: hamburger → slide-over drawer with full primary nav (there was previously *no* nav below 768 px) | `mobile-nav.tsx` (new), `(app)/layout.tsx`, `app.css` |
+| 3.5.5 | **Request list filters**: `?status=` / `?projectId=` server-side filters, status chips, project select, client search, `?new=1` deep-link opens the create dialog (used by dashboard/projects CTAs) | `feature-requests/page.tsx`, `feature-requests-manager.tsx` |
+| 3.5.6 | **Projects**: edit dialog (first UI for `project.update`), dialog-based delete confirm (was native `confirm()`), "New feature request" CTA on project detail | `projects-manager.tsx`, `projects/[id]/page.tsx` |
+| 3.5.7 | **Editorial theming for neglected surfaces** (pulled forward from Phase 5): Settings ×4, Billing (serif plan cards, usage meters, ledger EmptyState), Reviews list + detail | `settings/**`, `billing-manager.tsx`, `reviews-manager.tsx`, `reviews/[reviewId]/page.tsx` |
+
+**Done when:** a first-time user can land on the dashboard and reach any stage
+of any request in ≤2 clicks, always knowing what to do next; full nav works on
+mobile; typecheck + build green.
+
+---
+
 # Phase 4 — Design-system consolidation
 
 **Goal:** one theme system, one set of composition patterns — so Phase 5 is
@@ -172,13 +203,13 @@ treatment, using the Phase-4 patterns.
 
 | Surface | Components | Status |
 |---------|-----------|--------|
-| Settings → General | `general-settings-form` | ⬜ |
-| Settings → Members | `members-manager` (table, invite dialog, role menus) | ⬜ |
-| Settings → Integrations | `github-integration-card`, `repo-connect-card` | ⬜ |
-| Settings → Intake | `intake-key-card` | ⬜ |
-| Billing | `billing-manager` (plan cards, usage meters, ledger table, checkout dialogs) | ⬜ |
-| Reviews list | `reviews-manager` (filters, feed, shared `EmptyState`) | ⬜ |
-| Review detail | `reviews/[reviewId]` issue list | ⬜ |
+| Settings → General | `general-settings-form` | ✅ (Phase 3.5) |
+| Settings → Members | `members-manager` (table, invite dialog, role menus) | ✅ (Phase 3.5) |
+| Settings → Integrations | `github-integration-card`, `repo-connect-card` | ✅ (Phase 3.5) |
+| Settings → Intake | `intake-key-card` | ✅ (Phase 3.5) |
+| Billing | `billing-manager` (plan cards, usage meters, ledger table, checkout dialogs) | ✅ (Phase 3.5) |
+| Reviews list | `reviews-manager` (filters, feed, shared `EmptyState`) | ✅ (Phase 3.5) |
+| Review detail | `reviews/[reviewId]` issue list | ✅ (Phase 3.5) |
 | Review history | `review-history-timeline` | ⬜ |
 
 **Done when:** no authed page reads as "default shadcn"; side-by-side with the

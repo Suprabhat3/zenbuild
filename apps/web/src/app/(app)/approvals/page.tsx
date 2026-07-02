@@ -5,16 +5,15 @@ import { ArrowRight, ClipboardCheck } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
+  NEXT_ACTION,
   PRIORITY_LABELS,
   STATUS_BADGE_VARIANT,
   STATUS_LABELS,
@@ -25,123 +24,133 @@ import { api } from "@/trpc/server";
 export const metadata: Metadata = { title: "Approvals · ZenBuild" };
 export const dynamic = "force-dynamic";
 
-type RequestRow = Awaited<
-  ReturnType<typeof api.featureRequest.list>
->[number];
+type RequestRow = Awaited<ReturnType<typeof api.featureRequest.list>>[number];
 
-function ApprovalTable({ rows }: { rows: RequestRow[] }) {
+/**
+ * The decision inbox: one group per human gate in the pipeline, most
+ * ship-critical first. Everything here is blocked until someone acts.
+ */
+const GATES: {
+  statuses: FeatureRequestStatus[];
+  title: string;
+  description: string;
+}[] = [
+  {
+    statuses: ["IN_REVIEW"],
+    title: "Ship decisions",
+    description:
+      "AI review passed with no blocking issues — approve or reject the release.",
+  },
+  {
+    statuses: ["APPROVED"],
+    title: "Approved, not yet shipped",
+    description: "Approved for release with pull requests still open to merge.",
+  },
+  {
+    statuses: ["FIX_NEEDED"],
+    title: "Blocked on fixes",
+    description:
+      "AI review found blocking issues — fixes must land before a re-review.",
+  },
+  {
+    statuses: ["TASKS_READY"],
+    title: "Plans awaiting approval",
+    description:
+      "Task plans are drafted — approve them to start development.",
+  },
+  {
+    statuses: ["PRD_DRAFTED"],
+    title: "PRDs awaiting approval",
+    description: "PRD drafts are ready — review and approve to unlock planning.",
+  },
+];
+
+function GateList({ rows }: { rows: RequestRow[] }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Title</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Priority</TableHead>
-          <TableHead>Project</TableHead>
-          <TableHead className="text-right">Decision</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((r) => (
-          <TableRow key={r.id}>
-            <TableCell>
-              <Link
-                href={`/feature-requests/${r.id}`}
-                className="font-medium hover:text-primary hover:underline"
-              >
-                {r.title}
-              </Link>
-            </TableCell>
-            <TableCell>
-              <Badge variant={STATUS_BADGE_VARIANT[r.status as FeatureRequestStatus]}>
-                {STATUS_LABELS[r.status as FeatureRequestStatus]}
+    <div className="app-attn-list">
+      {rows.map((r) => {
+        const status = r.status as FeatureRequestStatus;
+        const action = NEXT_ACTION[status];
+        return (
+          <Link
+            key={r.id}
+            href={action?.href(r.id) ?? `/feature-requests/${r.id}`}
+            className="app-attn-item"
+          >
+            <span className="min-w-0">
+              <span className="app-attn-title">{r.title}</span>
+              <span className="app-attn-sub block">
+                {PRIORITY_LABELS[r.priority] ?? r.priority} priority
+                {r.project ? ` · ${r.project.name} (${r.project.key})` : ""}
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-3">
+              <Badge variant={STATUS_BADGE_VARIANT[status]}>
+                {STATUS_LABELS[status]}
               </Badge>
-            </TableCell>
-            <TableCell className="text-muted-foreground text-sm">
-              {PRIORITY_LABELS[r.priority] ?? r.priority}
-            </TableCell>
-            <TableCell className="text-muted-foreground text-sm">
-              {r.project ? (
-                <Badge variant="outline" className="font-mono">
-                  {r.project.key}
-                </Badge>
-              ) : (
-                "—"
+              {action && (
+                <span className="app-attn-cta">
+                  {action.label}
+                  <ArrowRight className="size-3.5" />
+                </span>
               )}
-            </TableCell>
-            <TableCell className="text-right">
-              <Link
-                href={`/feature-requests/${r.id}/release`}
-                className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
-              >
-                Review &amp; decide
-                <ArrowRight className="size-3.5" />
-              </Link>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+            </span>
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 
 export default async function ApprovalsPage() {
   const requests = await api.featureRequest.list();
 
-  const awaitingDecision = requests.filter((r) => r.status === "IN_REVIEW");
-  const approvedPendingShip = requests.filter((r) => r.status === "APPROVED");
+  const gates = GATES.map((gate) => ({
+    ...gate,
+    rows: requests.filter((r) =>
+      gate.statuses.includes(r.status as FeatureRequestStatus),
+    ),
+  })).filter((gate) => gate.rows.length > 0);
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Human gate"
+        eyebrow="Human gates"
         title="Approvals"
-        description="Feature requests that have cleared AI review and are waiting on a human release decision."
+        description="Everything in the pipeline that is blocked on a human decision — PRD sign-off, plan sign-off, fixes, and the final ship call."
       />
 
-      {awaitingDecision.length === 0 && approvedPendingShip.length === 0 ? (
+      {gates.length === 0 ? (
         <div className="app-panel">
           <EmptyState
             icon={ClipboardCheck}
-            title="Nothing awaiting approval"
-            description={
-              <>
-                When a feature request clears AI review, it lands here for the
-                final human decision before it can ship.
-              </>
+            title="Nothing awaiting a decision"
+            description="When a PRD, task plan, or release is ready for human sign-off — or a review finds blocking issues — it lands here."
+            action={
+              <Link
+                href="/feature-requests"
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                Browse feature requests →
+              </Link>
             }
           />
         </div>
       ) : (
-        <>
-          {awaitingDecision.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Awaiting decision</CardTitle>
-                <CardDescription>
-                  Reviewed and ready for approval or rejection.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ApprovalTable rows={awaitingDecision} />
-              </CardContent>
-            </Card>
-          )}
-
-          {approvedPendingShip.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Approved, not yet shipped</CardTitle>
-                <CardDescription>
-                  Approved for release with pull requests still open.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ApprovalTable rows={approvedPendingShip} />
-              </CardContent>
-            </Card>
-          )}
-        </>
+        gates.map((gate) => (
+          <Card key={gate.title}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {gate.title}
+                <Badge variant="secondary">{gate.rows.length}</Badge>
+              </CardTitle>
+              <CardDescription>{gate.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GateList rows={gate.rows} />
+            </CardContent>
+          </Card>
+        ))
       )}
     </div>
   );

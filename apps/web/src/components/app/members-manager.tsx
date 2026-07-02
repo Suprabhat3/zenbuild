@@ -12,6 +12,7 @@ import {
   type OrgRole,
 } from "@zenbuild/auth/client";
 
+import { PageHeader } from "@/components/app/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -173,20 +174,26 @@ export function MembersManager({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-          <div className="space-y-1.5">
-            <CardTitle>Members</CardTitle>
-            <CardDescription>
-              People with access to this workspace.
-            </CardDescription>
-          </div>
-          {canManage && (
+      <PageHeader
+        eyebrow="Settings"
+        title="Members"
+        description="People with access to this workspace, and pending invitations."
+        actions={
+          canManage ? (
             <Button onClick={() => setInviteOpen(true)} className="gap-1.5">
               <UserPlus className="size-4" />
-              Invite
+              Invite member
             </Button>
-          )}
+          ) : undefined
+        }
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Members</CardTitle>
+          <CardDescription>
+            People with access to this workspace.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>

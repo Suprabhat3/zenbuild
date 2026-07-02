@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { PageHeader } from "@/components/app/page-header";
 import { ReviewsManager } from "@/components/app/reviews-manager";
 import { api } from "@/trpc/server";
 
@@ -11,13 +12,11 @@ export default async function ReviewsPage() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="app-page-title">Review history</h1>
-        <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-          Full audit trail of AI QA reviews across your workspace — every
-          iteration, verdict, trigger source, and link to the GitHub comment.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Quality"
+        title="Review history"
+        description="Full audit trail of AI QA reviews across your workspace — every iteration, verdict, trigger source, and link to the GitHub comment."
+      />
 
       <ReviewsManager initialReviews={reviews} />
     </div>

@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FolderKanban, Plus, Trash2, MoreHorizontal } from "lucide-react";
+import { FolderKanban, Pencil, Plus, Trash2, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
+import { ProjectEditDialog } from "@/components/app/project-edit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,8 @@ export function ProjectsManager({
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
   const [keyEdited, setKeyEdited] = useState(false);
+  const [editTarget, setEditTarget] = useState<ProjectRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectRow | null>(null);
 
   const create = api.project.create.useMutation({
     onSuccess: () => {
@@ -67,6 +70,7 @@ export function ProjectsManager({
   const remove = api.project.delete.useMutation({
     onSuccess: () => {
       toast.success("Project deleted.");
+      setDeleteTarget(null);
       router.refresh();
     },
     onError: (e) => toast.error(e.message),
@@ -150,17 +154,16 @@ export function ProjectsManager({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
+                        className="gap-2"
+                        onClick={() => setEditTarget(p)}
+                      >
+                        <Pencil className="size-4" />
+                        Edit project
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         variant="destructive"
                         className="gap-2"
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Delete "${p.name}"? Its feature requests are kept but unlinked.`,
-                            )
-                          ) {
-                            remove.mutate({ id: p.id });
-                          }
-                        }}
+                        onClick={() => setDeleteTarget(p)}
                         disabled={remove.isPending}
                       >
                         <Trash2 className="size-4" />
@@ -248,6 +251,53 @@ export function ProjectsManager({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {editTarget && (
+        <ProjectEditDialog
+          project={editTarget}
+          open
+          onOpenChange={(next) => {
+            if (!next) setEditTarget(null);
+          }}
+        />
+      )}
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(next) => {
+          if (!next && !remove.isPending) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete “{deleteTarget?.name}”?</DialogTitle>
+            <DialogDescription>
+              This removes the project from the workspace and hides its feature
+              requests. This action cannot be undone from the app.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={remove.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (deleteTarget) remove.mutate({ id: deleteTarget.id });
+              }}
+              disabled={remove.isPending}
+            >
+              {remove.isPending ? "Deleting…" : "Delete project"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

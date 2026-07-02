@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Inbox, Plus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { Inbox, Plus, SearchX } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/app/empty-state";
@@ -66,16 +66,47 @@ export interface ProjectOption {
 }
 
 const NO_PROJECT = "__none__";
+const ALL_PROJECTS = "__all__";
+
+/** Fixed set of chips for the status filter row (terminal odd-cases omitted). */
+const FILTER_STATUSES: FeatureRequestStatus[] = [
+  "DRAFT",
+  "CLARIFYING",
+  "PRD_DRAFTED",
+  "PRD_APPROVED",
+  "TASKS_READY",
+  "IN_DEVELOPMENT",
+  "IN_REVIEW",
+  "FIX_NEEDED",
+  "APPROVED",
+  "SHIPPED",
+];
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 
 export function FeatureRequestsManager({
   requests,
   projects,
+  activeStatus,
+  activeProjectId,
+  openCreate,
+  createProjectId,
 }: {
   requests: FeatureRequestRow[];
   projects: ProjectOption[];
+  activeStatus: FeatureRequestStatus | null;
+  activeProjectId: string | null;
+  openCreate: boolean;
+  createProjectId: string | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [source, setSource] = useState("FORM");
@@ -83,6 +114,22 @@ export function FeatureRequestsManager({
   const [projectId, setProjectId] = useState<string>(NO_PROJECT);
   const [requesterName, setRequesterName] = useState("");
   const [requesterEmail, setRequesterEmail] = useState("");
+
+  // `?new=1` deep-links straight into the create dialog (e.g. from a project
+  // page). Open it once, preselect the project, then strip the flag from the
+  // URL so a refresh doesn't reopen the dialog.
+  useEffect(() => {
+    if (!openCreate) return;
+    setOpen(true);
+    if (createProjectId) setProjectId(createProjectId);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("new");
+    const query = params.toString();
+    router.replace(`/feature-requests${query ? `?${query}` : ""}`, {
+      scroll: false,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openCreate, createProjectId]);
 
   const create = api.featureRequest.create.useMutation({
     onSuccess: (res) => {
@@ -117,6 +164,36 @@ export function FeatureRequestsManager({
     });
   }
 
+  /** Build a filter URL, preserving the other active filter. */
+  function filterHref(next: {
+    status?: FeatureRequestStatus | null;
+    projectId?: string | null;
+  }) {
+    const status = next.status === undefined ? activeStatus : next.status;
+    const projectId =
+      next.projectId === undefined ? activeProjectId : next.projectId;
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (projectId) params.set("projectId", projectId);
+    const query = params.toString();
+    return `/feature-requests${query ? `?${query}` : ""}`;
+  }
+
+  function onProjectFilterChange(value: string | null) {
+    router.replace(
+      filterHref({ projectId: value === ALL_PROJECTS || !value ? null : value }),
+      { scroll: false },
+    );
+  }
+
+  const visibleRequests = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return requests;
+    return requests.filter((r) => r.title.toLowerCase().includes(needle));
+  }, [requests, search]);
+
+  const hasFilters = Boolean(activeStatus || activeProjectId || search.trim());
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -131,24 +208,92 @@ export function FeatureRequestsManager({
         }
       />
 
-      {requests.length === 0 ? (
-        <div className="app-panel">
-          <EmptyState
-            icon={Inbox}
-            title="No feature requests yet"
-            description={
-              <>
-                Create one here, or send a signed payload to the intake webhook
-                (see Settings → Intake).
-              </>
-            }
-            action={
-              <Button onClick={() => setOpen(true)} className="gap-1.5">
-                <Plus className="size-4" />
-                New request
-              </Button>
-            }
+      <div className="space-y-4">
+        <div className="app-pipeline" role="navigation" aria-label="Filter by status">
+          <Link
+            href={filterHref({ status: null })}
+            className={`app-pipeline-chip${activeStatus === null ? " is-active" : ""}`}
+            aria-current={activeStatus === null ? "true" : undefined}
+          >
+            All
+          </Link>
+          {FILTER_STATUSES.map((s) => (
+            <Link
+              key={s}
+              href={filterHref({ status: s })}
+              className={`app-pipeline-chip${activeStatus === s ? " is-active" : ""}`}
+              aria-current={activeStatus === s ? "true" : undefined}
+            >
+              {STATUS_LABELS[s]}
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by title…"
+            aria-label="Search feature requests by title"
+            className="w-full sm:max-w-xs"
           />
+          <Select
+            value={activeProjectId ?? ALL_PROJECTS}
+            onValueChange={onProjectFilterChange}
+          >
+            <SelectTrigger
+              className="w-full sm:w-56"
+              aria-label="Filter by project"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_PROJECTS}>All projects</SelectItem>
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name} ({p.key})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {visibleRequests.length === 0 ? (
+        <div className="app-panel">
+          {hasFilters ? (
+            <EmptyState
+              icon={SearchX}
+              title="No matching requests"
+              description="Nothing matches the current filters. Try broadening them."
+              action={
+                <Button
+                  variant="outline"
+                  render={<Link href="/feature-requests" />}
+                  onClick={() => setSearch("")}
+                >
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={Inbox}
+              title="No feature requests yet"
+              description={
+                <>
+                  Create one here, or send a signed payload to the intake webhook
+                  (see Settings → Intake).
+                </>
+              }
+              action={
+                <Button onClick={() => setOpen(true)} className="gap-1.5">
+                  <Plus className="size-4" />
+                  New request
+                </Button>
+              }
+            />
+          )}
         </div>
       ) : (
         <Card>
@@ -161,10 +306,11 @@ export function FeatureRequestsManager({
                   <TableHead>Source</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Project</TableHead>
+                  <TableHead>Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map((r) => (
+                {visibleRequests.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell>
                       <Link
@@ -197,6 +343,9 @@ export function FeatureRequestsManager({
                       ) : (
                         "—"
                       )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                      {dateFormatter.format(new Date(r.createdAt))}
                     </TableCell>
                   </TableRow>
                 ))}

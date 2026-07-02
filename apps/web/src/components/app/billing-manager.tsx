@@ -6,11 +6,13 @@ import {
   Check,
   CreditCard,
   Loader2,
+  Receipt,
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,6 +76,29 @@ function UsageBar({ used, total }: { used: number; total: number }) {
         }`}
         style={{ width: `${pct}%` }}
       />
+    </div>
+  );
+}
+
+/** Labeled usage meter — bar when the limit is finite, plain count otherwise. */
+function MeterRow({
+  label,
+  used,
+  limit,
+}: {
+  label: string;
+  used: number;
+  limit: number | null;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium">{label}</span>
+        <span className="text-muted-foreground tabular-nums">
+          {used} / {formatLimit(limit)}
+        </span>
+      </div>
+      {limit !== null && <UsageBar used={used} total={limit} />}
     </div>
   );
 }
@@ -223,7 +248,7 @@ export function BillingManager({
           <CardHeader>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 font-(family-name:--font-display) text-xl font-normal tracking-tight">
                   <CreditCard className="size-4 text-primary" />
                   {PLAN_NAMES[currentPlan]} plan
                 </CardTitle>
@@ -237,8 +262,8 @@ export function BillingManager({
             </div>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-semibold">
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-(family-name:--font-display) text-3xl tracking-tight">
                 {formatInr(summary.currentPlan.priceInInr)}
               </span>
               {summary.currentPlan.priceInInr > 0 && (
@@ -289,27 +314,26 @@ export function BillingManager({
                 </p>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Connected repos</p>
-                <p className="mt-0.5 font-medium">
-                  {repos.used} / {formatLimit(repos.limit)}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Members</p>
-                <p className="mt-0.5 font-medium">
-                  {seats.used} / {formatLimit(seats.limit)}
-                </p>
-              </div>
-            </div>
+            <MeterRow
+              label="Connected repos"
+              used={repos.used}
+              limit={repos.limit}
+            />
+            <MeterRow label="Members" used={seats.used} limit={seats.limit} />
           </CardContent>
         </Card>
       </div>
 
       {/* Plan comparison */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Plans</h2>
+        <div>
+          <h2 className="font-(family-name:--font-display) text-xl tracking-tight">
+            Plans
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Change plans anytime — upgrades take effect immediately.
+          </p>
+        </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...summary.plans]
             .sort((a, b) => PLAN_ORDER[a.tier] - PLAN_ORDER[b.tier])
@@ -327,16 +351,17 @@ export function BillingManager({
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 font-(family-name:--font-display) text-xl font-normal tracking-tight">
                         {plan.tier !== "FREE" && (
                           <Sparkles className="size-4 text-primary" />
                         )}
                         {PLAN_NAMES[plan.tier]}
                       </CardTitle>
-                      {isCurrent && <Badge>Current</Badge>}
+                      {isCurrent && <Badge>Current plan</Badge>}
                     </div>
-                    <div className="flex items-baseline gap-1 pt-1">
-                      <span className="text-2xl font-semibold">
+                    <CardDescription>{PLAN_TAGLINES[plan.tier]}</CardDescription>
+                    <div className="flex items-baseline gap-1.5 pt-1">
+                      <span className="font-(family-name:--font-display) text-3xl tracking-tight">
                         {formatInr(plan.priceInInr)}
                       </span>
                       {plan.priceInInr > 0 && (
@@ -389,9 +414,22 @@ export function BillingManager({
 
       {/* Credit activity */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Credit activity</h2>
+        <div>
+          <h2 className="font-(family-name:--font-display) text-xl tracking-tight">
+            Credit activity
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Every credit granted and spent in this workspace.
+          </p>
+        </div>
         {ledger.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No credit activity yet.</p>
+          <Card>
+            <EmptyState
+              icon={Receipt}
+              title="No credit activity yet"
+              description="Credits granted by your plan and spent on AI runs will appear here."
+            />
+          </Card>
         ) : (
           <Card>
             <Table>

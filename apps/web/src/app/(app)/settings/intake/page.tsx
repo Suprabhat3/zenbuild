@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { IntakeKeyCard } from "@/components/app/intake-key-card";
+import { PageHeader } from "@/components/app/page-header";
 import { api } from "@/trpc/server";
 
 export const metadata: Metadata = { title: "Intake settings · ZenBuild" };
@@ -17,12 +18,19 @@ export default async function IntakeSettingsPage() {
   const endpoint = `${baseUrl}/api/intake`;
 
   return (
-    <IntakeKeyCard
-      initialKey={
-        key ? { token: key.token, rotatedAt: key.rotatedAt } : null
-      }
-      endpoint={endpoint}
-      canManage={canManage}
-    />
+    <>
+      <PageHeader
+        eyebrow="Settings"
+        title="Intake"
+        description="Receive feature requests from email, tickets, or calls via a signed webhook."
+      />
+      <IntakeKeyCard
+        initialKey={
+          key ? { token: key.token, rotatedAt: key.rotatedAt } : null
+        }
+        endpoint={endpoint}
+        canManage={canManage}
+      />
+    </>
   );
 }

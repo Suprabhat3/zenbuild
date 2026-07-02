@@ -67,6 +67,11 @@ export default async function ReviewDetailPage({
       </Link>
 
       <header className="space-y-3">
+        <span className="app-eyebrow">AI code review</span>
+        <h1 className="app-page-title">
+          {review.pullRequest.repository.fullName} #{review.pullRequest.number}
+        </h1>
+        <p className="app-page-lede">{review.pullRequest.title}</p>
         <div className="flex flex-wrap items-center gap-2">
           {verdict && (
             <Badge variant={VERDICT_BADGE[verdict]}>{VERDICT_LABELS[verdict]}</Badge>
@@ -83,10 +88,6 @@ export default async function ReviewDetailPage({
             </Badge>
           )}
         </div>
-        <h1 className="app-page-title">
-          {review.pullRequest.repository.fullName} #{review.pullRequest.number}
-        </h1>
-        <p className="text-muted-foreground text-sm">{review.pullRequest.title}</p>
         <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {review.featureRequest && (
             <Link
@@ -107,6 +108,7 @@ export default async function ReviewDetailPage({
             href={review.pullRequest.url}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label={`Open pull request #${review.pullRequest.number} on GitHub`}
             className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
           >
             Open pull request
@@ -117,6 +119,7 @@ export default async function ReviewDetailPage({
               href={review.githubReviewUrl}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Open the review comment on GitHub"
               className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
             >
               View GitHub review comment
@@ -168,10 +171,10 @@ export default async function ReviewDetailPage({
                         {CATEGORY_LABELS[cat]}
                       </span>
                       {issue.filePath && (
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <code className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 font-mono text-xs">
                           {issue.filePath}
                           {issue.line ? `:${issue.line}` : ""}
-                        </span>
+                        </code>
                       )}
                     </div>
                     <p className="font-medium">{issue.title}</p>

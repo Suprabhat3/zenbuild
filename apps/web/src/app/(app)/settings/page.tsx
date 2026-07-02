@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { GeneralSettingsForm } from "@/components/app/general-settings-form";
+import { PageHeader } from "@/components/app/page-header";
 import { api } from "@/trpc/server";
 
 export const metadata: Metadata = { title: "General settings · ZenBuild" };
@@ -11,11 +12,18 @@ export default async function GeneralSettingsPage() {
   const canEdit = org.role === "owner" || org.role === "admin";
 
   return (
-    <GeneralSettingsForm
-      organizationId={org.id}
-      initialName={org.name}
-      slug={org.slug}
-      canEdit={canEdit}
-    />
+    <>
+      <PageHeader
+        eyebrow="Settings"
+        title="General"
+        description="Your workspace name and URL."
+      />
+      <GeneralSettingsForm
+        organizationId={org.id}
+        initialName={org.name}
+        slug={org.slug}
+        canEdit={canEdit}
+      />
+    </>
   );
 }

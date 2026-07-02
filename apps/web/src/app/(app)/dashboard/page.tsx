@@ -3,16 +3,20 @@ import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
+  ArrowRight,
+  CheckCheck,
   FolderKanban,
   GitBranch,
   Inbox,
   Loader2,
+  Plus,
   Sparkles,
 } from "lucide-react";
 
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { StatCard } from "@/components/app/stat-card";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -21,6 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  NEXT_ACTION,
   STATUS_LABELS,
   type FeatureRequestStatus,
 } from "@/lib/feature-request";
@@ -45,13 +50,42 @@ const STATUS_ORDER: FeatureRequestStatus[] = [
   "DECLINED_DUPLICATE",
 ];
 
+/** Statuses that are blocked on a human decision, most urgent first. */
+const ATTENTION_ORDER: FeatureRequestStatus[] = [
+  "FIX_NEEDED",
+  "IN_REVIEW",
+  "APPROVED",
+  "TASKS_READY",
+  "PRD_DRAFTED",
+];
+
+/** Human labels for WorkflowRun.type — never show raw enum values. */
+const RUN_TYPE_LABELS: Record<string, string> = {
+  CLARIFY: "Discovery",
+  PRD_GENERATE: "PRD generation",
+  TASKS_GENERATE: "Task planning",
+  REPO_ANALYZE: "Repository analysis",
+  TASK_IMPLEMENT: "Coding agent",
+  PR_REVIEW: "AI code review",
+  RELEASE_READINESS: "Release readiness",
+};
+
+function runTypeLabel(type: string) {
+  return (
+    RUN_TYPE_LABELS[type] ??
+    type.toLowerCase().replaceAll("_", " ").replace(/^\w/, (c) => c.toUpperCase())
+  );
+}
+
 export default async function DashboardPage() {
   let org: Awaited<ReturnType<typeof api.viewer.activeOrganization>>;
   let summary: Awaited<ReturnType<typeof api.dashboard.summary>>;
+  let requests: Awaited<ReturnType<typeof api.featureRequest.list>>;
   try {
-    [org, summary] = await Promise.all([
+    [org, summary, requests] = await Promise.all([
       api.viewer.activeOrganization(),
       api.dashboard.summary(),
+      api.featureRequest.list(),
     ]);
   } catch {
     return (
@@ -82,15 +116,37 @@ export default async function DashboardPage() {
       label: "Feature requests",
       value: summary.totals.featureRequests,
       icon: Inbox,
+      href: "/feature-requests",
     },
-    { label: "Projects", value: summary.totals.projects, icon: FolderKanban },
-    { label: "Repositories", value: summary.totals.repositories, icon: GitBranch },
-    { label: "Review credits", value: credits, icon: Sparkles },
+    {
+      label: "Projects",
+      value: summary.totals.projects,
+      icon: FolderKanban,
+      href: "/projects",
+    },
+    {
+      label: "Repositories",
+      value: summary.totals.repositories,
+      icon: GitBranch,
+      href: "/settings/integrations",
+    },
+    {
+      label: "Review credits",
+      value: credits,
+      icon: Sparkles,
+      href: "/billing",
+    },
   ];
 
   const populatedStatuses = STATUS_ORDER.filter(
     (s) => (summary.countsByStatus[s] ?? 0) > 0,
   );
+
+  // Requests blocked on a human decision, most urgent stage first.
+  const needsAttention = ATTENTION_ORDER.flatMap((status) =>
+    requests.filter((r) => r.status === status),
+  );
+  const attentionPreview = needsAttention.slice(0, 6);
 
   return (
     <div className="space-y-8">
@@ -102,6 +158,12 @@ export default async function DashboardPage() {
             {org.subscription?.plan ?? "FREE"} plan · your role: {org.role}
           </>
         }
+        actions={
+          <Button render={<Link href="/feature-requests?new=1" />}>
+            <Plus className="size-4" />
+            New request
+          </Button>
+        }
       />
 
       <div className="app-stat-grid">
@@ -111,23 +173,85 @@ export default async function DashboardPage() {
             label={stat.label}
             value={stat.value}
             icon={stat.icon}
+            href={stat.href}
           />
         ))}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCheck className="size-4 text-primary" />
+            Needs your attention
+          </CardTitle>
+          <CardDescription>
+            Requests waiting on a decision or a fix from your team.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {attentionPreview.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Nothing is waiting on you right now. New requests, PRD approvals,
+              plan approvals, and ship decisions will show up here.
+            </p>
+          ) : (
+            <>
+              <div className="app-attn-list">
+                {attentionPreview.map((r) => {
+                  const status = r.status as FeatureRequestStatus;
+                  const action = NEXT_ACTION[status];
+                  return (
+                    <Link
+                      key={r.id}
+                      href={action?.href(r.id) ?? `/feature-requests/${r.id}`}
+                      className="app-attn-item"
+                    >
+                      <span className="min-w-0">
+                        <span className="app-attn-title">{r.title}</span>
+                        <span className="app-attn-sub block">
+                          {STATUS_LABELS[status]}
+                          {r.project ? ` · ${r.project.key}` : ""}
+                        </span>
+                      </span>
+                      {action && (
+                        <span className="app-attn-cta">
+                          {action.label}
+                          <ArrowRight className="size-3.5" />
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+              {needsAttention.length > attentionPreview.length && (
+                <Link
+                  href="/approvals"
+                  className="text-primary mt-3 inline-block text-sm font-medium hover:underline"
+                >
+                  See all {needsAttention.length} in Approvals →
+                </Link>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Pipeline</CardTitle>
             <CardDescription>
-              Feature requests by stage of the delivery loop.
+              Feature requests by stage — click a stage to see its requests.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {populatedStatuses.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 No feature requests yet.{" "}
-                <Link href="/feature-requests" className="font-medium text-primary hover:underline">
+                <Link
+                  href="/feature-requests?new=1"
+                  className="font-medium text-primary hover:underline"
+                >
                   Create your first
                 </Link>{" "}
                 to get started.
@@ -135,10 +259,14 @@ export default async function DashboardPage() {
             ) : (
               <div className="app-pipeline">
                 {populatedStatuses.map((s) => (
-                  <span key={s} className="app-pipeline-chip">
+                  <Link
+                    key={s}
+                    href={`/feature-requests?status=${s}`}
+                    className="app-pipeline-chip"
+                  >
                     {STATUS_LABELS[s]}
                     <strong>{summary.countsByStatus[s]}</strong>
-                  </span>
+                  </Link>
                 ))}
               </div>
             )}
@@ -162,15 +290,20 @@ export default async function DashboardPage() {
                 {summary.activeRuns.map((run) => (
                   <li key={run.id} className="text-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{run.type}</span>
+                      <span className="font-medium">
+                        {runTypeLabel(run.type)}
+                      </span>
                       <span className="text-muted-foreground text-xs">
                         {run.progress}%
                       </span>
                     </div>
                     {run.featureRequest && (
-                      <span className="text-muted-foreground text-xs">
+                      <Link
+                        href={`/feature-requests/${run.featureRequest.id}`}
+                        className="text-muted-foreground hover:text-primary text-xs hover:underline"
+                      >
                         {run.featureRequest.title}
-                      </span>
+                      </Link>
                     )}
                   </li>
                 ))}

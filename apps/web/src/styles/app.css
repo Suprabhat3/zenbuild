@@ -858,6 +858,243 @@
   color: var(--zb-ink-soft);
 }
 
+/* ---------- pipeline stepper (feature-request workspace) ---------- */
+.app-stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding: 0.25rem 0 0.5rem;
+}
+.app-stepper-step {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 4.5rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  text-align: center;
+}
+/* connector line between steps */
+.app-stepper-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 0.8125rem;
+  left: calc(50% + 1rem);
+  width: calc(100% - 2rem);
+  height: 2px;
+  background: var(--zb-line);
+}
+.app-stepper-step.is-done:not(:last-child)::after {
+  background: var(--zb-sage);
+}
+.app-stepper-dot {
+  display: grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 999px;
+  border: 2px solid var(--zb-line);
+  background: var(--zb-paper);
+  color: var(--zb-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.app-stepper-step.is-done .app-stepper-dot {
+  border-color: var(--zb-sage);
+  background: var(--zb-sage);
+  color: #fff;
+}
+.app-stepper-step.is-current .app-stepper-dot {
+  border-color: var(--zb-accent);
+  background: var(--zb-accent-soft);
+  color: var(--zb-accent-deep);
+  box-shadow: 0 0 0 4px var(--zb-accent-tint);
+}
+.app-stepper-step.is-terminal .app-stepper-dot {
+  border-color: var(--zb-accent-deep);
+  background: var(--zb-accent-deep);
+  color: #fff;
+}
+.app-stepper-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--zb-muted);
+  white-space: nowrap;
+}
+.app-stepper-step.is-current .app-stepper-label {
+  color: var(--zb-accent-deep);
+}
+.app-stepper-step.is-done .app-stepper-label {
+  color: var(--zb-ink-soft);
+}
+
+/* next-action banner under the stepper */
+.app-next-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--zb-accent-tint);
+  border-radius: 0.875rem;
+  background: var(--zb-accent-soft);
+  padding: 0.75rem 1rem;
+}
+.app-next-action-hint {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--zb-ink-soft);
+}
+.app-next-action-hint strong {
+  color: var(--zb-accent-deep);
+  font-weight: 700;
+}
+
+/* ---------- feature workspace tabs ---------- */
+.app-subnav {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--zb-line-soft);
+  overflow-x: auto;
+}
+.app-subnav .app-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+.app-subnav .app-tab svg {
+  opacity: 0.75;
+}
+
+/* ---------- mobile drawer nav ---------- */
+.app-menu-btn {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--zb-line-soft);
+  border-radius: 0.625rem;
+  background: var(--zb-paper);
+  color: var(--zb-ink);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.app-menu-btn:hover {
+  background: var(--zb-bg-deep);
+}
+@media (min-width: 768px) {
+  .app-menu-btn {
+    display: none;
+  }
+}
+.app-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(37, 32, 26, 0.4);
+  backdrop-filter: blur(2px);
+}
+.app-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 61;
+  display: flex;
+  width: min(18rem, 85vw);
+  flex-direction: column;
+  border-right: 1px solid var(--zb-line-soft);
+  background: var(--zb-paper);
+  padding: 1rem 0.75rem;
+  box-shadow: var(--zb-shadow-card);
+  animation: app-drawer-in 0.2s ease-out;
+}
+@keyframes app-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.app-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.25rem 0.5rem;
+}
+
+/* ---------- attention queue (dashboard / approvals) ---------- */
+.app-attn-list {
+  display: flex;
+  flex-direction: column;
+}
+.app-attn-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0.25rem;
+  border-bottom: 1px solid var(--zb-line-soft);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.app-attn-item:last-child {
+  border-bottom: none;
+}
+.app-attn-item:hover {
+  background: color-mix(in srgb, var(--zb-bg-deep) 55%, transparent);
+}
+.app-attn-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--zb-ink);
+}
+.app-attn-sub {
+  margin-top: 0.125rem;
+  font-size: 0.8125rem;
+  color: var(--zb-muted);
+}
+.app-attn-cta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--zb-accent-deep);
+}
+
+/* clickable pipeline chips + filter chips */
+a.app-pipeline-chip {
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+a.app-pipeline-chip:hover {
+  border-color: var(--zb-accent);
+  background: var(--zb-accent-soft);
+}
+.app-pipeline-chip.is-active {
+  border-color: var(--zb-accent);
+  background: var(--zb-accent-soft);
+  color: var(--zb-accent-deep);
+}
+
+/* stat card as a link */
+a.app-stat-card {
+  display: block;
+  text-decoration: none;
+}
+
 /* ---------- review history timeline (Phase 11) ---------- */
 .app-review-timeline {
   list-style: none;

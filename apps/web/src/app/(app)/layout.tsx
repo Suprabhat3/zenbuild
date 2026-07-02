@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { EnsureActiveOrg } from "@/components/app/ensure-active-org";
+import { MobileNav } from "@/components/app/mobile-nav";
 import { OrgSwitcher } from "@/components/app/org-switcher";
 import { SidebarNav } from "@/components/app/sidebar-nav";
 import { UserMenu } from "@/components/app/user-menu";
@@ -60,7 +61,8 @@ export default async function AppLayout({
 
         <div className="app-main">
           <header className="app-topbar">
-            <div className="md:hidden">
+            <div className="flex items-center gap-2 md:hidden">
+              <MobileNav />
               <OrgSwitcher organizations={organizations} activeOrgId={active.id} />
             </div>
             <div className="ml-auto">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { BillingManager } from "@/components/app/billing-manager";
+import { PageHeader } from "@/components/app/page-header";
 import { api } from "@/trpc/server";
 
 export const metadata: Metadata = { title: "Billing · ZenBuild" };
@@ -14,13 +15,11 @@ export default async function BillingPage() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="app-page-title">Billing &amp; usage</h1>
-        <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-          Manage your plan, track AI credit and repository usage, and review your
-          credit activity. Paid plans are billed securely through Razorpay.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Billing & plan"
+        description="Manage your plan, track AI credit and repository usage, and review your credit activity. Paid plans are billed securely through Razorpay."
+      />
 
       <BillingManager initialSummary={summary} initialLedger={ledger} />
     </div>

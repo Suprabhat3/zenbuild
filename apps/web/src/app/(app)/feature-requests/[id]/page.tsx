@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { TRPCError } from "@trpc/server";
 
 import { DiscoveryPanel, type ClarificationMessageView } from "@/components/app/discovery-panel";
@@ -10,21 +9,13 @@ import { PlanningPanel } from "@/components/app/planning-panel";
 import { ReleasePanel } from "@/components/app/release-panel";
 import { ReviewPanel } from "@/components/app/review-panel";
 import { PrdEditor, type PrdContent } from "@/components/app/prd-editor";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  PRIORITY_LABELS,
-  SOURCE_LABELS,
-  STATUS_BADGE_VARIANT,
-  STATUS_LABELS,
-  type FeatureRequestStatus,
-} from "@/lib/feature-request";
+import { type FeatureRequestStatus } from "@/lib/feature-request";
 import { api } from "@/trpc/server";
 
 export const metadata: Metadata = { title: "Feature Request · ZenBuild" };
@@ -61,121 +52,102 @@ export default async function FeatureRequestDetailPage({
   }));
 
   return (
-    <div className="space-y-8">
-      <Link href="/feature-requests" className="app-back-link">
-        <ArrowLeft className="size-4" />
-        Feature requests
-      </Link>
+    <div className="app-detail-grid">
+      <div className="space-y-6">
+        <FixNeededPanel featureRequestId={request.id} status={status} />
 
-      <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={STATUS_BADGE_VARIANT[status]}>
-            {STATUS_LABELS[status]}
-          </Badge>
-          <span className="text-muted-foreground text-sm">
-            {SOURCE_LABELS[request.source] ?? request.source} ·{" "}
-            {PRIORITY_LABELS[request.priority] ?? request.priority} priority
-          </span>
-        </div>
-        <h1 className="app-page-title">{request.title}</h1>
-        <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          {request.requesterName && <span>From {request.requesterName}</span>}
-          {request.requesterEmail && <span>{request.requesterEmail}</span>}
-          {request.project && (
-            <Link
-              href={`/projects/${request.project.id}`}
-              className="font-medium text-primary hover:underline"
-            >
-              Project: {request.project.name} ({request.project.key})
-            </Link>
-          )}
-        </div>
-      </header>
+        <Card>
+          <CardHeader>
+            <CardTitle>Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              {request.description}
+            </p>
+          </CardContent>
+        </Card>
 
-      <div className="app-detail-grid">
-        <div className="space-y-6">
-          <FixNeededPanel featureRequestId={request.id} status={status} />
+        <DiscoveryPanel
+          featureRequestId={request.id}
+          status={status}
+          messages={messages}
+          hasPrd={Boolean(prd)}
+        />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {request.description}
-              </p>
-            </CardContent>
-          </Card>
-
-          <DiscoveryPanel
+        {prd && (
+          <PrdEditor
             featureRequestId={request.id}
+            content={prd.content as unknown as PrdContent}
+            version={prd.version}
+            approvedAt={prd.approvedAt}
             status={status}
-            messages={messages}
-            hasPrd={Boolean(prd)}
+            canApprove={canApprove}
           />
+        )}
 
-          {prd && (
-            <PrdEditor
-              featureRequestId={request.id}
-              content={prd.content as unknown as PrdContent}
-              version={prd.version}
-              approvedAt={prd.approvedAt}
-              status={status}
-              canApprove={canApprove}
+        <PlanningPanel
+          featureRequestId={request.id}
+          status={status}
+          taskCount={request._count.tasks}
+        />
+
+        <ReviewPanel featureRequestId={request.id} status={status} />
+
+        <ReleasePanel featureRequestId={request.id} status={status} />
+      </div>
+
+      <div className="space-y-6">
+        <Card className="app-meta-card">
+          <CardHeader>
+            <CardTitle>Progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MetaRow label="PRD" value={request.prd ? `v${request.prd.version}` : "—"} />
+            <MetaRow label="Tasks" value={String(request._count.tasks)} />
+            <MetaRow
+              label="Pull requests"
+              value={String(request._count.pullRequests)}
             />
-          )}
-
-          <PlanningPanel
-            featureRequestId={request.id}
-            status={status}
-            taskCount={request._count.tasks}
-          />
-
-          <ReviewPanel featureRequestId={request.id} status={status} />
-
-          <ReleasePanel featureRequestId={request.id} status={status} />
-        </div>
-
-        <div className="space-y-6">
-          <Card className="app-meta-card">
-            <CardHeader>
-              <CardTitle>Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MetaRow label="PRD" value={request.prd ? `v${request.prd.version}` : "—"} />
-              <MetaRow label="Tasks" value={String(request._count.tasks)} />
-              <MetaRow
-                label="Pull requests"
-                value={String(request._count.pullRequests)}
-              />
-              <MetaRow label="Reviews" value={String(request._count.reviews)} />
+            <MetaRow label="Reviews" value={String(request._count.reviews)} />
+            <div className="mt-3 flex flex-col gap-1.5">
+              {request._count.tasks > 0 && (
+                <Link
+                  href={`/feature-requests/${request.id}/board`}
+                  className="text-primary text-sm font-medium hover:underline"
+                >
+                  Open the task board →
+                </Link>
+              )}
               {request._count.reviews > 0 && (
                 <Link
                   href={`/feature-requests/${request.id}/reviews`}
-                  className="text-primary mt-2 inline-block text-sm font-medium hover:underline"
+                  className="text-primary text-sm font-medium hover:underline"
                 >
                   View review history →
                 </Link>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {request.rawPayload != null && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Inbound payload</CardTitle>
-                <CardDescription>
-                  Original payload received via the intake webhook.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+        {request.rawPayload != null && (
+          <Card>
+            <CardContent>
+              <details>
+                <summary className="cursor-pointer text-sm font-semibold">
+                  Original intake payload
+                </summary>
+                <p className="text-muted-foreground mt-1 mb-2 text-xs">
+                  Raw payload received via the intake webhook, kept for
+                  traceability.
+                </p>
                 <pre className="app-code">
                   {JSON.stringify(request.rawPayload, null, 2)}
                 </pre>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </details>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
