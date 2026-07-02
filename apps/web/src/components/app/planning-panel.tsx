@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, ListChecks, Loader2, Sparkles } from "lucide-react";
+import { ListChecks, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -20,18 +20,16 @@ import type { FeatureRequestStatus } from "@/lib/feature-request";
 const ACTIVE = new Set(["QUEUED", "RUNNING"]);
 
 /**
- * Planning entry point on the feature-request detail page. Appears once the PRD
- * is approved: it triggers async task generation (with live progress) and links
- * through to the full Kanban board once tasks exist.
+ * Task-generation entry point on the Plan stage, shown while the request has
+ * no tasks yet: it triggers async generation with live progress, after which
+ * the page re-renders with the Kanban board.
  */
 export function PlanningPanel({
   featureRequestId,
   status,
-  taskCount,
 }: {
   featureRequestId: string;
   status: FeatureRequestStatus;
-  taskCount: number;
 }) {
   const router = useRouter();
   const [polling, setPolling] = useState(false);
@@ -63,7 +61,6 @@ export function PlanningPanel({
   });
 
   const busy = polling || active || generate.isPending;
-  const hasTasks = taskCount > 0;
 
   // Only relevant from PRD approval onward.
   const visibleStatuses: FeatureRequestStatus[] = [
@@ -100,7 +97,17 @@ export function PlanningPanel({
           </div>
         )}
 
-        {!hasTasks && status === "PRD_APPROVED" && !busy && (
+        {!busy && run?.status === "FAILED" && (
+          <Alert variant="destructive">
+            <AlertTitle>Task generation didn't complete</AlertTitle>
+            <AlertDescription>
+              {run.error ??
+                "The workflow failed. Try again — if it keeps happening, the background worker may be offline."}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {status === "PRD_APPROVED" && !busy && (
           <div className="space-y-3">
             <p className="text-muted-foreground text-sm leading-relaxed">
               No tasks yet. Let the AI engineering lead break the PRD into an
@@ -115,22 +122,6 @@ export function PlanningPanel({
               <Sparkles className="size-4" />
               Generate tasks
             </Button>
-          </div>
-        )}
-
-        {hasTasks && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm">
-              <span className="font-semibold">{taskCount}</span>{" "}
-              {taskCount === 1 ? "task" : "tasks"} on the board.
-            </p>
-            <Link
-              href={`/feature-requests/${featureRequestId}/board`}
-              className={buttonVariants({ className: "gap-1.5" })}
-            >
-              Open board
-              <ArrowRight className="size-4" />
-            </Link>
           </div>
         )}
       </CardContent>

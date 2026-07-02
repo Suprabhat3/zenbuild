@@ -141,7 +141,7 @@ export function FixNeededPanel({
   const nonBlocking = (data?.nonBlockingIssues ?? []) as IssueView[];
 
   return (
-    <Card className="border-destructive/40 bg-destructive/[0.03]">
+    <Card className="border-destructive/40 bg-destructive/3">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-destructive">
           <Wrench className="size-4" />
@@ -183,7 +183,7 @@ export function FixNeededPanel({
 
         <div className="flex flex-wrap gap-2">
           <Link
-            href={`/feature-requests/${featureRequestId}/board`}
+            href={`/requests/${featureRequestId}/plan`}
             className={buttonVariants({ className: "gap-1.5" })}
           >
             Open board

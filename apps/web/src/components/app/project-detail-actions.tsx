@@ -27,11 +27,11 @@ export function ProjectDetailActions({ project }: { project: EditableProject }) 
       <Button
         className="gap-1.5"
         render={
-          <Link href={`/feature-requests?new=1&projectId=${project.id}`} />
+          <Link href={`/requests?new=1&projectId=${project.id}`} />
         }
       >
         <Plus className="size-4" />
-        New feature request
+        New request
       </Button>
       <ProjectEditDialog
         project={project}

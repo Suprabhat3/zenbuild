@@ -71,16 +71,30 @@ export const PRIORITY_LABELS: Record<string, string> = {
 /* ------------------------------------------------------------------ */
 
 export const PIPELINE_STAGES = [
-  { key: "intake", label: "Intake" },
-  { key: "discovery", label: "Discovery" },
-  { key: "prd", label: "PRD" },
-  { key: "plan", label: "Plan" },
-  { key: "build", label: "Build" },
-  { key: "review", label: "Review" },
-  { key: "ship", label: "Ship" },
+  // Intake has no stage route: the request's existence *is* the artifact, and
+  // the raw payload is shown on Discovery.
+  { key: "intake", label: "Intake", slug: null },
+  { key: "discovery", label: "Discovery", slug: "discovery" },
+  { key: "prd", label: "PRD", slug: "prd" },
+  { key: "plan", label: "Plan", slug: "plan" },
+  { key: "build", label: "Build", slug: "build" },
+  { key: "review", label: "Review", slug: "reviews" },
+  { key: "ship", label: "Ship", slug: "ship" },
 ] as const;
 
 export type PipelineStageKey = (typeof PIPELINE_STAGES)[number]["key"];
+
+/** URL segment of a stage surface under /requests/[id]/. */
+export type StageSlug = NonNullable<(typeof PIPELINE_STAGES)[number]["slug"]>;
+
+/**
+ * The stage tab a request should open on: the stage it currently sits in.
+ * `/requests/[id]` redirects here.
+ */
+export function stageSlugForStatus(status: FeatureRequestStatus): StageSlug {
+  const stage = PIPELINE_STAGES[STATUS_STAGE_INDEX[status]];
+  return stage?.slug ?? "discovery";
+}
 
 /** Index into PIPELINE_STAGES of the stage the request currently sits in. */
 export const STATUS_STAGE_INDEX: Record<FeatureRequestStatus, number> = {
@@ -104,6 +118,52 @@ export const TERMINAL_STATUSES: FeatureRequestStatus[] = [
   "DECLINED_DUPLICATE",
 ];
 
+/**
+ * Statuses blocked on a human decision, most urgent first. Drives Home's
+ * "Needs your decision" queue and the `?attention=1` list filter.
+ */
+export const ATTENTION_STATUSES: FeatureRequestStatus[] = [
+  "FIX_NEEDED",
+  "IN_REVIEW",
+  "APPROVED",
+  "TASKS_READY",
+  "PRD_DRAFTED",
+];
+
+/**
+ * Stage groups for filtering the requests list (`?stage=`). Unlike
+ * STATUS_STAGE_INDEX (which places terminal statuses on the stage they exited
+ * from, for the stepper), these buckets are disjoint: closed requests live in
+ * "closed", not in a pipeline stage.
+ */
+export const STAGE_FILTERS: {
+  key: string;
+  label: string;
+  statuses: FeatureRequestStatus[];
+}[] = [
+  { key: "discovery", label: "Discovery", statuses: ["DRAFT", "CLARIFYING"] },
+  { key: "prd", label: "PRD", statuses: ["PRD_DRAFTED"] },
+  { key: "plan", label: "Plan", statuses: ["PRD_APPROVED", "TASKS_READY"] },
+  { key: "build", label: "Build", statuses: ["IN_DEVELOPMENT"] },
+  { key: "review", label: "Review", statuses: ["IN_REVIEW", "FIX_NEEDED"] },
+  { key: "ship", label: "Ship", statuses: ["APPROVED", "SHIPPED"] },
+  {
+    key: "closed",
+    label: "Closed",
+    statuses: ["REJECTED", "DECLINED_DUPLICATE"],
+  },
+];
+
+/** The stage-filter bucket a status belongs to (label shown as its chip). */
+export const STATUS_STAGE_FILTER: Record<
+  FeatureRequestStatus,
+  { key: string; label: string }
+> = Object.fromEntries(
+  STAGE_FILTERS.flatMap((f) =>
+    f.statuses.map((s) => [s, { key: f.key, label: f.label }]),
+  ),
+) as Record<FeatureRequestStatus, { key: string; label: string }>;
+
 export interface NextAction {
   /** Button label, e.g. "Approve the PRD". */
   label: string;
@@ -124,55 +184,55 @@ export const NEXT_ACTION: Record<FeatureRequestStatus, NextAction | null> = {
   DRAFT: {
     label: "Start discovery",
     hint: "Run the discovery agent to clarify the request before drafting a PRD.",
-    href: (id) => `/feature-requests/${id}`,
+    href: (id) => `/requests/${id}/discovery`,
     adminGate: false,
   },
   CLARIFYING: {
     label: "Continue discovery",
     hint: "Answer the agent's questions, or generate the PRD when ready.",
-    href: (id) => `/feature-requests/${id}`,
+    href: (id) => `/requests/${id}/discovery`,
     adminGate: false,
   },
   PRD_DRAFTED: {
     label: "Review & approve the PRD",
     hint: "The PRD draft is ready — edit it, then approve to unlock planning.",
-    href: (id) => `/feature-requests/${id}`,
+    href: (id) => `/requests/${id}/prd`,
     adminGate: true,
   },
   PRD_APPROVED: {
     label: "Generate the task plan",
     hint: "The PRD is approved — break it into engineering tasks.",
-    href: (id) => `/feature-requests/${id}/board`,
+    href: (id) => `/requests/${id}/plan`,
     adminGate: false,
   },
   TASKS_READY: {
     label: "Review & approve the plan",
     hint: "Tasks are drafted — adjust the board, then approve the plan to start development.",
-    href: (id) => `/feature-requests/${id}/board`,
+    href: (id) => `/requests/${id}/plan`,
     adminGate: true,
   },
   IN_DEVELOPMENT: {
     label: "Implement tasks",
     hint: "Development is underway — implement tasks with the coding agent or link PRs.",
-    href: (id) => `/feature-requests/${id}/board`,
+    href: (id) => `/requests/${id}/build`,
     adminGate: false,
   },
   IN_REVIEW: {
     label: "Make the ship decision",
     hint: "AI review passed with no blocking issues — a human decides whether it ships.",
-    href: (id) => `/feature-requests/${id}/release`,
+    href: (id) => `/requests/${id}/ship`,
     adminGate: true,
   },
   FIX_NEEDED: {
     label: "Resolve blocking issues",
     hint: "Review found blocking issues — fix them and push to trigger a re-review.",
-    href: (id) => `/feature-requests/${id}`,
+    href: (id) => `/requests/${id}/reviews`,
     adminGate: false,
   },
   APPROVED: {
     label: "Finish shipping",
     hint: "Approved for release — merge the remaining pull requests to ship.",
-    href: (id) => `/feature-requests/${id}/release`,
+    href: (id) => `/requests/${id}/ship`,
     adminGate: true,
   },
   SHIPPED: null,

@@ -164,7 +164,7 @@ export function ReviewsManager({ initialReviews }: { initialReviews: ListReview[
                       </div>
                       {review.featureRequest && (
                         <Link
-                          href={`/feature-requests/${review.featureRequest.id}/reviews`}
+                          href={`/requests/${review.featureRequest.id}/reviews`}
                           className="hover:text-primary block font-(family-name:--font-display) text-lg tracking-tight transition-colors"
                         >
                           {review.featureRequest.title}

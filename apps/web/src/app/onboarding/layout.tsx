@@ -1,11 +1,11 @@
 /**
- * Full-screen branded shell for the post-verification onboarding flow. Applies
- * the `.authx` scope so it shares the warm editorial brand with the auth pages.
+ * Full-screen branded shell for the post-verification onboarding flow. The
+ * warm editorial theme is global, so no scope wrapper is needed.
  */
 export default function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="authx">{children}</div>;
+  return <div className="min-h-svh">{children}</div>;
 }

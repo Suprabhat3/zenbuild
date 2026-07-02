@@ -1,3 +1,5 @@
+@layer tokens;
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -5,8 +7,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: var(--font-sans);
+    --font-sans: var(--font-body);
+    --font-heading: var(--font-display);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,39 +49,76 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+/*
+ * ZenBuild theme — warm editorial palette (cream paper, ink, rose accent).
+ * Single source of truth: every surface (marketing, auth, onboarding, app,
+ * legal, error pages) reads these tokens. Do NOT redefine palette values in
+ * surface stylesheets — alias `--zb-*` instead. See src/styles/README.md.
+ */
+@layer tokens {
+  :root {
+    /* palette */
+    --zb-bg: #faf5ec;
+    --zb-bg-deep: #f2ebdd;
+    --zb-paper: #fffdf8;
+    --zb-ink: #25201a;
+    --zb-ink-soft: #4e463b;
+    --zb-muted: #847a6a;
+    --zb-line: #e6dcc8;
+    --zb-line-soft: #efe7d6;
+    --zb-accent: #e11d48;
+    --zb-accent-deep: #b81239;
+    --zb-accent-soft: #fce9ed;
+    --zb-accent-tint: #f9dfe5;
+    --zb-gold: #c98a2d;
+    --zb-sage: #6e7f5e;
+
+    /* elevation */
+    --zb-shadow-card: 0 1px 2px rgba(60, 45, 20, 0.05),
+      0 12px 32px -12px rgba(60, 45, 20, 0.18);
+    --zb-shadow-soft: 0 1px 2px rgba(60, 45, 20, 0.04),
+      0 4px 16px -6px rgba(60, 45, 20, 0.1);
+    --zb-shadow-float: 0 2px 4px rgba(60, 45, 20, 0.06),
+      0 24px 48px -16px rgba(60, 45, 20, 0.25);
+
+    /* typography — src vars are injected by next/font in the root layout */
+    --font-display: var(--font-display-src), Georgia, serif;
+    --font-body: var(--font-body-src), "Helvetica Neue", sans-serif;
+
+    /* shadcn token bridge */
+    --background: var(--zb-bg);
+    --foreground: var(--zb-ink);
+    --card: var(--zb-paper);
+    --card-foreground: var(--zb-ink);
+    --popover: var(--zb-paper);
+    --popover-foreground: var(--zb-ink);
+    --primary: var(--zb-accent);
+    --primary-foreground: #ffffff;
+    --secondary: var(--zb-bg-deep);
+    --secondary-foreground: var(--zb-ink);
+    --muted: var(--zb-bg-deep);
+    --muted-foreground: var(--zb-muted);
+    --accent: var(--zb-accent-soft);
+    --accent-foreground: var(--zb-accent-deep);
+    --destructive: var(--zb-accent-deep);
+    --border: var(--zb-line);
+    --input: var(--zb-line);
+    --ring: var(--zb-accent);
+    --chart-1: var(--zb-accent);
+    --chart-2: var(--zb-gold);
+    --chart-3: var(--zb-sage);
+    --chart-4: #7c93c4;
+    --chart-5: var(--zb-ink-soft);
+    --radius: 0.75rem;
+    --sidebar: var(--zb-paper);
+    --sidebar-foreground: var(--zb-ink);
+    --sidebar-primary: var(--zb-accent);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: var(--zb-accent-soft);
+    --sidebar-accent-foreground: var(--zb-accent-deep);
+    --sidebar-border: var(--zb-line-soft);
+    --sidebar-ring: var(--zb-accent);
+  }
 }
 
 /*
@@ -94,8 +133,12 @@
     }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
     }
   html {
     @apply font-sans;
+    }
+  ::selection {
+    background: var(--zb-accent-tint);
     }
 }

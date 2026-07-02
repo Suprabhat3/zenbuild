@@ -1,71 +1,8 @@
 /* ============================================================
-   ZenBuild — authenticated app shell
-   Warm editorial palette aligned with landing + auth surfaces.
-   Scoped to `.appx` so shadcn tokens never leak elsewhere.
+   ZenBuild — authenticated app shell components (`.app-*`).
+   Palette + shadcn tokens live globally on `:root` (globals.css);
+   this file only styles app-shell structure and components.
    ============================================================ */
-
-.appx {
-  --zb-bg: #faf5ec;
-  --zb-bg-deep: #f2ebdd;
-  --zb-paper: #fffdf8;
-  --zb-ink: #25201a;
-  --zb-ink-soft: #4e463b;
-  --zb-muted: #847a6a;
-  --zb-line: #e6dcc8;
-  --zb-line-soft: #efe7d6;
-  --zb-accent: #e11d48;
-  --zb-accent-deep: #b81239;
-  --zb-accent-soft: #fce9ed;
-  --zb-accent-tint: #f9dfe5;
-  --zb-gold: #c98a2d;
-  --zb-sage: #6e7f5e;
-  --zb-shadow-card: 0 1px 2px rgba(60, 45, 20, 0.05),
-    0 12px 32px -12px rgba(60, 45, 20, 0.18);
-  --zb-shadow-soft: 0 1px 2px rgba(60, 45, 20, 0.04),
-    0 4px 16px -6px rgba(60, 45, 20, 0.1);
-  --font-display: var(--font-display-src), Georgia, serif;
-  --font-body: var(--font-body-src), "Helvetica Neue", sans-serif;
-  --font-heading: var(--font-display);
-
-  /* shadcn token bridge */
-  --background: var(--zb-bg);
-  --foreground: var(--zb-ink);
-  --card: var(--zb-paper);
-  --card-foreground: var(--zb-ink);
-  --popover: var(--zb-paper);
-  --popover-foreground: var(--zb-ink);
-  --primary: var(--zb-accent);
-  --primary-foreground: #ffffff;
-  --secondary: var(--zb-bg-deep);
-  --secondary-foreground: var(--zb-ink);
-  --muted: var(--zb-bg-deep);
-  --muted-foreground: var(--zb-muted);
-  --accent: var(--zb-accent-soft);
-  --accent-foreground: var(--zb-accent-deep);
-  --destructive: var(--zb-accent-deep);
-  --border: var(--zb-line);
-  --input: var(--zb-line);
-  --ring: var(--zb-accent);
-  --radius: 0.75rem;
-  --sidebar: var(--zb-paper);
-  --sidebar-foreground: var(--zb-ink);
-  --sidebar-primary: var(--zb-accent);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--zb-accent-soft);
-  --sidebar-accent-foreground: var(--zb-accent-deep);
-  --sidebar-border: var(--zb-line-soft);
-  --sidebar-ring: var(--zb-accent);
-
-  min-height: 100svh;
-  background: var(--zb-bg);
-  color: var(--zb-ink);
-  font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-}
-
-.appx ::selection {
-  background: var(--zb-accent-tint);
-}
 
 /* ---------- shell ---------- */
 .app-shell {
@@ -177,6 +114,11 @@
 .app-nav-link[aria-current="page"] svg {
   opacity: 1;
 }
+.app-nav-divider {
+  margin: 0.5rem 0.375rem;
+  border: none;
+  border-top: 1px solid var(--zb-line-soft);
+}
 
 /* ---------- page typography ---------- */
 .app-eyebrow {
@@ -246,14 +188,13 @@
 }
 
 /* ---------- cards & surfaces ---------- */
-.appx [data-slot="card"] {
+[data-slot="card"] {
   border: 1px solid var(--zb-line-soft);
   border-radius: 1rem;
   background: var(--zb-paper);
   box-shadow: var(--zb-shadow-soft);
-  ring: none;
 }
-.appx [data-slot="card-footer"] {
+[data-slot="card-footer"] {
   background: var(--zb-bg);
   border-color: var(--zb-line-soft);
 }
@@ -387,23 +328,23 @@
 }
 
 /* ---------- tables ---------- */
-.appx [data-slot="table-container"] {
+[data-slot="table-container"] {
   border: 1px solid var(--zb-line-soft);
   border-radius: 0.875rem;
   overflow: hidden;
 }
-.appx thead [data-slot="table-row"] {
+thead [data-slot="table-row"] {
   background: var(--zb-bg);
   border-bottom: 1px solid var(--zb-line-soft);
 }
-.appx [data-slot="table-head"] {
+[data-slot="table-head"] {
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--zb-muted);
 }
-.appx tbody [data-slot="table-row"]:hover {
+tbody [data-slot="table-row"]:hover {
   background: color-mix(in srgb, var(--zb-bg-deep) 60%, transparent);
 }
 
@@ -522,6 +463,44 @@
   border-color: var(--zb-line);
 }
 
+/* agent "is typing" indicator */
+.app-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  vertical-align: middle;
+}
+.app-typing-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--zb-accent);
+  animation: app-typing-bounce 1.2s infinite ease-in-out;
+}
+.app-typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.app-typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes app-typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-typing-dot {
+    animation: none;
+  }
+}
+
 /* ---------- PRD spec sheet (mirrors landing product section) ---------- */
 .app-prd-sheet {
   position: relative;
@@ -627,7 +606,7 @@
 }
 
 /* ---------- org switcher accent ---------- */
-.appx .app-org-icon {
+.app-org-icon {
   background: var(--zb-accent-soft) !important;
   color: var(--zb-accent-deep) !important;
 }
@@ -873,16 +852,35 @@
   min-width: 4.5rem;
   flex-direction: column;
   align-items: center;
-  gap: 0.375rem;
   text-align: center;
+}
+/* each step is a link to its stage surface (the stepper IS the tab bar) */
+.app-stepper-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.625rem;
+  text-decoration: none;
+}
+.app-stepper-link:focus-visible {
+  outline: 2px solid var(--zb-accent);
+  outline-offset: 2px;
+}
+a.app-stepper-link:hover .app-stepper-label {
+  color: var(--zb-ink);
+}
+a.app-stepper-link:hover .app-stepper-dot {
+  border-color: var(--zb-muted);
 }
 /* connector line between steps */
 .app-stepper-step:not(:last-child)::after {
   content: "";
   position: absolute;
-  top: 0.8125rem;
-  left: calc(50% + 1rem);
-  width: calc(100% - 2rem);
+  top: 1.0625rem;
+  left: calc(50% + 1.125rem);
+  width: calc(100% - 2.25rem);
   height: 2px;
   background: var(--zb-line);
 }
@@ -913,10 +911,9 @@
   color: var(--zb-accent-deep);
   box-shadow: 0 0 0 4px var(--zb-accent-tint);
 }
-.app-stepper-step.is-terminal .app-stepper-dot {
-  border-color: var(--zb-accent-deep);
-  background: var(--zb-accent-deep);
-  color: #fff;
+.app-stepper-step.is-future .app-stepper-dot {
+  border-color: var(--zb-line-soft);
+  color: color-mix(in srgb, var(--zb-muted) 65%, transparent);
 }
 .app-stepper-label {
   font-size: 0.6875rem;
@@ -925,12 +922,22 @@
   text-transform: uppercase;
   color: var(--zb-muted);
   white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 2px;
 }
 .app-stepper-step.is-current .app-stepper-label {
   color: var(--zb-accent-deep);
 }
 .app-stepper-step.is-done .app-stepper-label {
   color: var(--zb-ink-soft);
+}
+.app-stepper-step.is-future .app-stepper-label {
+  color: color-mix(in srgb, var(--zb-muted) 70%, transparent);
+}
+/* the stage surface currently open in the workspace */
+.app-stepper-step.is-viewing .app-stepper-label {
+  color: var(--zb-accent-deep);
+  border-bottom-color: var(--zb-accent);
 }
 
 /* next-action banner under the stepper */
@@ -953,6 +960,22 @@
 .app-next-action-hint strong {
   color: var(--zb-accent-deep);
   font-weight: 700;
+}
+
+/* neutral banner for terminal statuses (rejected / duplicate) */
+.app-closed-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--zb-line);
+  border-radius: 0.875rem;
+  background: var(--zb-bg-deep);
+  padding: 0.75rem 1rem;
+}
+.app-closed-banner .app-next-action-hint strong {
+  color: var(--zb-ink);
 }
 
 /* ---------- feature workspace tabs ---------- */

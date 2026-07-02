@@ -1,27 +1,29 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { TRPCError } from "@trpc/server";
+import { ArrowLeft, ArrowRight, CheckCircle2, CircleSlash } from "lucide-react";
 
-import { FeatureRequestTabs } from "@/components/app/feature-request-tabs";
+import { EditRequestDialog } from "@/components/app/edit-request-dialog";
 import { PipelineStepper } from "@/components/app/pipeline-stepper";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
+  NEXT_ACTION,
   PRIORITY_LABELS,
   SOURCE_LABELS,
   STATUS_BADGE_VARIANT,
   STATUS_LABELS,
+  TERMINAL_STATUSES,
   type FeatureRequestStatus,
 } from "@/lib/feature-request";
+import { requireFeatureRequest } from "@/server/feature-request";
 import { api } from "@/trpc/server";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Shared shell for the feature-request workspace. Every surface of the
- * delivery loop (overview, task board, reviews, release) renders inside the
- * same header + pipeline stepper + tab bar, so the user never loses track of
- * where the request is or how to reach the other stages.
+ * Shell for the request workspace. The pipeline stepper doubles as the
+ * navigation between stage surfaces (discovery → ship); under it, a single
+ * next-action banner tells the user what the request is waiting on. Each stage
+ * page renders below as `children`.
  */
 export default async function FeatureRequestLayout({
   children,
@@ -31,24 +33,32 @@ export default async function FeatureRequestLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  let request: Awaited<ReturnType<typeof api.featureRequest.byId>>;
-  try {
-    request = await api.featureRequest.byId({ id });
-  } catch (error) {
-    if (error instanceof TRPCError && error.code === "NOT_FOUND") notFound();
-    throw error;
-  }
-
+  const request = await requireFeatureRequest(id);
   const status = request.status as FeatureRequestStatus;
+  const action = NEXT_ACTION[status];
+  const editable = !TERMINAL_STATUSES.includes(status);
+  const projects = editable ? await api.project.list() : [];
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/feature-requests" className="app-back-link">
+        <nav className="app-back-link" aria-label="Breadcrumb">
           <ArrowLeft className="size-4" />
-          All requests
-        </Link>
+          <Link href="/requests" className="hover:underline">
+            Requests
+          </Link>
+          {request.project && (
+            <>
+              <span aria-hidden>/</span>
+              <Link
+                href={`/projects/${request.project.id}`}
+                className="hover:underline"
+              >
+                {request.project.name}
+              </Link>
+            </>
+          )}
+        </nav>
 
         <header className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -59,13 +69,23 @@ export default async function FeatureRequestLayout({
               {SOURCE_LABELS[request.source] ?? request.source} ·{" "}
               {PRIORITY_LABELS[request.priority] ?? request.priority} priority
             </span>
-            {request.project && (
-              <Link
-                href={`/projects/${request.project.id}`}
-                className="text-primary text-sm font-medium hover:underline"
-              >
-                {request.project.name} ({request.project.key})
-              </Link>
+            {editable && (
+              <span className="ml-auto">
+                <EditRequestDialog
+                  request={{
+                    id: request.id,
+                    title: request.title,
+                    description: request.description,
+                    priority: request.priority,
+                    projectId: request.project?.id ?? null,
+                  }}
+                  projects={projects.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    key: p.key,
+                  }))}
+                />
+              </span>
             )}
           </div>
           <h1 className="app-page-title">{request.title}</h1>
@@ -82,7 +102,39 @@ export default async function FeatureRequestLayout({
 
       <PipelineStepper featureRequestId={id} status={status} />
 
-      <FeatureRequestTabs id={id} />
+      {action ? (
+        <div className="app-next-action">
+          <p className="app-next-action-hint">
+            <strong>Next up:</strong> {action.hint}
+          </p>
+          <Button size="sm" render={<Link href={action.href(id)} />}>
+            {action.label}
+            <ArrowRight className="size-3.5" />
+          </Button>
+        </div>
+      ) : status === "SHIPPED" ? (
+        <div className="app-next-action">
+          <p className="app-next-action-hint">
+            <CheckCircle2 className="mr-1.5 inline size-4 align-text-bottom" />
+            <strong>Shipped.</strong> This feature completed the full delivery
+            loop — every stage is browsable read-only.
+          </p>
+        </div>
+      ) : (
+        <div className="app-closed-banner">
+          <p className="app-next-action-hint">
+            <CircleSlash className="mr-1.5 inline size-4 align-text-bottom" />
+            <strong>
+              Closed —{" "}
+              {status === "DECLINED_DUPLICATE"
+                ? "declined as a duplicate"
+                : "rejected"}
+              .
+            </strong>{" "}
+            This request left the pipeline and won't move forward.
+          </p>
+        </div>
+      )}
 
       {children}
     </div>

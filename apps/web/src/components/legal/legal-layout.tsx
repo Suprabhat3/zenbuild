@@ -11,7 +11,7 @@ type LegalLayoutProps = {
 
 export function LegalLayout({ title, eyebrow, children, alternate }: LegalLayoutProps) {
   return (
-    <div className="legal">
+    <div className="legal-page">
       <header className="legal-header">
         <div className="legal-header-inner">
           <Link href="/" className="legal-back">

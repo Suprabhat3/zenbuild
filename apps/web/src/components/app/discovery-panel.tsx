@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bot, Loader2, Send, Sparkles, User } from "lucide-react";
+import { Bot, Send, Sparkles, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -42,6 +42,9 @@ export function DiscoveryPanel({
 }) {
   const router = useRouter();
   const [answer, setAnswer] = useState("");
+  // Echo the user's answer into the chat immediately — the agent should feel
+  // like a conversation partner, not a form submission.
+  const [pendingAnswer, setPendingAnswer] = useState<string | null>(null);
   // While a run is active we poll; once it settles we refresh server data once.
   const [polling, setPolling] = useState(false);
   const wasActive = useRef(false);
@@ -67,6 +70,7 @@ export function DiscoveryPanel({
     if (polling && wasActive.current && run && !runActive) {
       wasActive.current = false;
       setPolling(false);
+      setPendingAnswer(null);
       if (run.status === "FAILED") {
         toast.error(run.error ?? "The workflow failed.");
       }
@@ -90,7 +94,10 @@ export function DiscoveryPanel({
       setAnswer("");
       onTriggered(r.workflowRunId);
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => {
+      setPendingAnswer(null);
+      toast.error(e.message);
+    },
   });
   const generatePrd = api.prd.generate.useMutation({
     onSuccess: (r) => onTriggered(r.workflowRunId),
@@ -103,6 +110,10 @@ export function DiscoveryPanel({
     start.isPending ||
     answerMut.isPending ||
     generatePrd.isPending;
+
+  // The latest run failed and nothing new is in flight: say so, persistently.
+  // A transient toast is not enough — the user must see why nothing happened.
+  const failed = !busy && run?.status === "FAILED";
 
   const lastAgent = [...messages].reverse().find((m) => m.role === "AGENT");
   const decision = lastAgent?.metadata?.decision;
@@ -125,14 +136,14 @@ export function DiscoveryPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {busy && (
-          <div className="text-muted-foreground flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-sm">
-            <Loader2 className="size-4 animate-spin text-primary" />
-            {run?.step ?? "Working…"}
-            {typeof run?.progress === "number" && run.progress > 0 && (
-              <span>· {run.progress}%</span>
-            )}
-          </div>
+        {failed && (
+          <Alert variant="destructive">
+            <AlertTitle>The last discovery run didn't complete</AlertTitle>
+            <AlertDescription>
+              {run?.error ??
+                "The workflow failed. Try again — if it keeps happening, the background worker may be offline."}
+            </AlertDescription>
+          </Alert>
         )}
 
         {messages.length === 0 && !busy ? (
@@ -181,6 +192,38 @@ export function DiscoveryPanel({
                 </div>
               </li>
             ))}
+
+            {pendingAnswer && busy && (
+              <li className="app-chat-msg is-user">
+                <span className="app-chat-avatar">
+                  <User className="size-3.5" />
+                </span>
+                <div className="app-chat-bubble">
+                  <p className="whitespace-pre-wrap">{pendingAnswer}</p>
+                </div>
+              </li>
+            )}
+
+            {busy && (
+              <li className="app-chat-msg is-agent" aria-live="polite">
+                <span className="app-chat-avatar">
+                  <Bot className="size-3.5" />
+                </span>
+                <div className="app-chat-bubble">
+                  <span className="app-typing" aria-hidden>
+                    <span className="app-typing-dot" />
+                    <span className="app-typing-dot" />
+                    <span className="app-typing-dot" />
+                  </span>
+                  <span className="text-muted-foreground ml-2 text-xs">
+                    {run?.step ?? "The agent is thinking…"}
+                    {typeof run?.progress === "number" &&
+                      run.progress > 0 &&
+                      ` · ${run.progress}%`}
+                  </span>
+                </div>
+              </li>
+            )}
           </ul>
         )}
 
@@ -199,6 +242,7 @@ export function DiscoveryPanel({
             className="space-y-2"
             onSubmit={(e) => {
               e.preventDefault();
+              setPendingAnswer(answer.trim());
               answerMut.mutate({ featureRequestId, content: answer.trim() });
             }}
           >

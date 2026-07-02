@@ -1,39 +1,16 @@
 /* ============================================================
-   ZenBuild — legal pages (Terms, Privacy)
-   Reuses the warm editorial brand from landing/auth.
+   ZenBuild — legal pages (Terms, Privacy), `.legal-*` classes.
+   Palette tokens live globally on `:root` (globals.css).
    ============================================================ */
 
-.legal {
-  --bg: #faf5ec;
-  --bg-deep: #f2ebdd;
-  --paper: #fffdf8;
-  --ink: #25201a;
-  --ink-soft: #4e463b;
-  --muted: #847a6a;
-  --line: #e6dcc8;
-  --accent: #e11d48;
-  --accent-deep: #b81239;
-  --accent-tint: #f9dfe5;
-  --font-display: var(--font-display-src), Georgia, serif;
-  --font-body: var(--font-body-src), "Helvetica Neue", sans-serif;
-
+.legal-page {
   min-height: 100svh;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-}
-
-.legal *,
-.legal *::before,
-.legal *::after {
-  box-sizing: border-box;
 }
 
 .legal-header {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--zb-line);
   background:
-    radial-gradient(120% 90% at 0% 0%, #fff7ea 0%, var(--bg) 42%, var(--bg-deep) 100%);
+    radial-gradient(120% 90% at 0% 0%, #fff7ea 0%, var(--zb-bg) 42%, var(--zb-bg-deep) 100%);
 }
 
 .legal-header-inner {
@@ -46,7 +23,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted);
+  color: var(--zb-muted);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -55,18 +32,18 @@
 }
 
 .legal-back:hover {
-  color: var(--ink);
+  color: var(--zb-ink);
 }
 
 .legal-wordmark {
   font-family: var(--font-display);
   font-size: 22px;
-  color: var(--ink);
+  color: var(--zb-ink);
   text-decoration: none;
 }
 
 .legal-wordmark b {
-  color: var(--accent);
+  color: var(--zb-accent);
   font-weight: 400;
 }
 
@@ -79,7 +56,7 @@
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--zb-accent);
 }
 
 .legal-title {
@@ -94,7 +71,7 @@
 
 .legal-meta {
   margin-top: 12px;
-  color: var(--muted);
+  color: var(--zb-muted);
   font-size: 14px;
 }
 
@@ -105,8 +82,8 @@
 }
 
 .legal-prose {
-  background: var(--paper);
-  border: 1px solid var(--line);
+  background: var(--zb-paper);
+  border: 1px solid var(--zb-line);
   border-radius: 20px;
   padding: 36px 32px;
   box-shadow: 0 1px 2px rgba(60, 45, 20, 0.05),
@@ -126,7 +103,7 @@
   font-size: 24px;
   line-height: 1.2;
   letter-spacing: -0.01em;
-  color: var(--ink);
+  color: var(--zb-ink);
   margin: 36px 0 12px;
 }
 
@@ -137,13 +114,13 @@
 .legal-prose h3 {
   font-size: 16px;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--zb-ink);
   margin: 24px 0 8px;
 }
 
 .legal-prose p,
 .legal-prose li {
-  color: var(--ink-soft);
+  color: var(--zb-ink-soft);
   font-size: 15px;
   line-height: 1.7;
 }
@@ -163,7 +140,7 @@
 }
 
 .legal-prose a {
-  color: var(--accent-deep);
+  color: var(--zb-accent-deep);
   font-weight: 600;
   text-decoration: none;
 }
@@ -174,7 +151,7 @@
 }
 
 .legal-prose strong {
-  color: var(--ink);
+  color: var(--zb-ink);
   font-weight: 600;
 }
 
@@ -184,11 +161,11 @@
   gap: 12px 20px;
   margin-top: 28px;
   padding-top: 24px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--zb-line);
 }
 
 .legal-nav a {
-  color: var(--accent-deep);
+  color: var(--zb-accent-deep);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;

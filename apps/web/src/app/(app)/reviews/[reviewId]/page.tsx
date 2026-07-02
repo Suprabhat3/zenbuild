@@ -61,9 +61,16 @@ export default async function ReviewDetailPage({
 
   return (
     <div className="space-y-8">
-      <Link href="/reviews" className="app-back-link">
+      <Link
+        href={
+          review.featureRequest
+            ? `/requests/${review.featureRequest.id}/reviews`
+            : "/reviews"
+        }
+        className="app-back-link"
+      >
         <ArrowLeft className="size-4" />
-        Review history
+        {review.featureRequest ? "Request reviews" : "Review history"}
       </Link>
 
       <header className="space-y-3">
@@ -91,7 +98,7 @@ export default async function ReviewDetailPage({
         <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {review.featureRequest && (
             <Link
-              href={`/feature-requests/${review.featureRequest.id}/reviews`}
+              href={`/requests/${review.featureRequest.id}/reviews`}
               className="font-medium text-primary hover:underline"
             >
               {review.featureRequest.title}

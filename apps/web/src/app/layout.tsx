@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Instrument_Serif, Schibsted_Grotesk, Geist } from "next/font/google";
+import { Instrument_Serif, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 import "@/styles/landing.css";
 import "@/styles/auth.css";
@@ -8,8 +8,6 @@ import "@/styles/app.css";
 import { TRPCReactProvider } from "@/trpc/react";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const display = Instrument_Serif({
   subsets: ["latin"],
@@ -38,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn(display.variable, body.variable, "font-sans", geist.variable)}>
+    <html lang="en" className={cn(display.variable, body.variable, "font-sans")}>
       <body>
         <TRPCReactProvider>{children}</TRPCReactProvider>
         <Toaster richColors position="top-center" />

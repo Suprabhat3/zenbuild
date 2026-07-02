@@ -37,8 +37,7 @@ export default async function AppLayout({
     organizations[0];
 
   return (
-    <div className="appx">
-      <div className="app-shell">
+    <div className="app-shell">
         <EnsureActiveOrg
           desiredId={active.id}
           sessionActiveId={session.activeOrganizationId}
@@ -73,7 +72,6 @@ export default async function AppLayout({
             <div className="app-content-inner">{children}</div>
           </main>
         </div>
-      </div>
     </div>
   );
 }

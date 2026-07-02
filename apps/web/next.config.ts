@@ -18,6 +18,39 @@ const nextConfig: NextConfig = {
     "@zenbuild/email",
     "@zenbuild/env",
   ],
+  // Legacy URL shapes from the pre-redesign IA (docs/frontend-redesign-plan.md
+  // §4.1). Permanent: these paths are gone for good.
+  async redirects() {
+    return [
+      {
+        source: "/feature-requests",
+        destination: "/requests",
+        permanent: true,
+      },
+      {
+        source: "/feature-requests/:path*",
+        destination: "/requests/:path*",
+        permanent: true,
+      },
+      // Approvals inbox folded into Home's "Needs your decision" queue.
+      {
+        source: "/approvals",
+        destination: "/dashboard",
+        permanent: true,
+      },
+      // Workspace sub-pages replaced by stage routes.
+      {
+        source: "/requests/:id/board",
+        destination: "/requests/:id/plan",
+        permanent: true,
+      },
+      {
+        source: "/requests/:id/release",
+        destination: "/requests/:id/ship",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

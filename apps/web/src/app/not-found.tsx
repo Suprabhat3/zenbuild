@@ -1,14 +1,12 @@
 import Link from "next/link";
 
 /**
- * Global 404 for any URL that doesn't match a route. Uses the `.authx` scope so
- * it shares the warm editorial brand without needing the app shell (the visitor
- * may not be signed in).
+ * Global 404 for any URL that doesn't match a route. Renders without the app
+ * shell (the visitor may not be signed in); the warm theme is global.
  */
 export default function NotFound() {
   return (
-    <div className="authx">
-      <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
         <Link href="/" className="auth-wordmark mb-8">
           ZenBuild
         </Link>
@@ -26,7 +24,6 @@ export default function NotFound() {
             Back to home
           </Link>
         </div>
-      </div>
     </div>
   );
 }

@@ -145,4 +145,90 @@ export const featureRequestRouter = createTRPCRouter({
 
       return { id: created.id };
     }),
+
+  update: orgProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        title: z
+          .string()
+          .trim()
+          .min(3, "Title must be at least 3 characters.")
+          .max(160, "Title is too long."),
+        description: z
+          .string()
+          .trim()
+          .min(10, "Describe the request in a little more detail.")
+          .max(10000, "Description is too long."),
+        priority: prioritySchema,
+        projectId: z.string().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.featureRequest.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+        select: { id: true, status: true },
+      });
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Feature request not found.",
+        });
+      }
+      // Closed requests are a decision record; reopen by creating a new
+      // request instead of rewriting history.
+      if (
+        existing.status === "SHIPPED" ||
+        existing.status === "REJECTED" ||
+        existing.status === "DECLINED_DUPLICATE"
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This request is closed and can no longer be edited.",
+        });
+      }
+
+      if (input.projectId) {
+        const project = await ctx.db.project.findFirst({
+          where: {
+            id: input.projectId,
+            organizationId: ctx.organizationId,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+        if (!project) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Selected project does not exist.",
+          });
+        }
+      }
+
+      const updated = await ctx.db.$transaction(async (tx) => {
+        const request = await tx.featureRequest.update({
+          where: { id: existing.id },
+          data: {
+            title: input.title,
+            description: input.description,
+            priority: input.priority,
+            projectId: input.projectId,
+          },
+          select: { id: true },
+        });
+        await tx.auditLog.create({
+          data: {
+            organizationId: ctx.organizationId,
+            actorId: ctx.user.id,
+            action: "featureRequest.update",
+            entityType: "featureRequest",
+            entityId: request.id,
+            metadata: { title: input.title },
+          },
+        });
+        return request;
+      });
+
+      return { id: updated.id };
+    }),
 });

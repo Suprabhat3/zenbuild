@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCheck,
+  CheckCircle2,
+  Circle,
   FolderKanban,
   GitBranch,
   Inbox,
@@ -16,6 +18,7 @@ import {
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { StatCard } from "@/components/app/stat-card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,39 +28,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  ATTENTION_STATUSES,
   NEXT_ACTION,
+  STAGE_FILTERS,
+  STATUS_BADGE_VARIANT,
   STATUS_LABELS,
   type FeatureRequestStatus,
 } from "@/lib/feature-request";
 import { api } from "@/trpc/server";
 
-export const metadata: Metadata = { title: "Dashboard · ZenBuild" };
+export const metadata: Metadata = { title: "Home · ZenBuild" };
 export const dynamic = "force-dynamic";
-
-// Order in which to surface populated states on the dashboard.
-const STATUS_ORDER: FeatureRequestStatus[] = [
-  "DRAFT",
-  "CLARIFYING",
-  "PRD_DRAFTED",
-  "PRD_APPROVED",
-  "TASKS_READY",
-  "IN_DEVELOPMENT",
-  "IN_REVIEW",
-  "FIX_NEEDED",
-  "APPROVED",
-  "SHIPPED",
-  "REJECTED",
-  "DECLINED_DUPLICATE",
-];
-
-/** Statuses that are blocked on a human decision, most urgent first. */
-const ATTENTION_ORDER: FeatureRequestStatus[] = [
-  "FIX_NEEDED",
-  "IN_REVIEW",
-  "APPROVED",
-  "TASKS_READY",
-  "PRD_DRAFTED",
-];
 
 /** Human labels for WorkflowRun.type — never show raw enum values. */
 const RUN_TYPE_LABELS: Record<string, string> = {
@@ -73,11 +54,16 @@ const RUN_TYPE_LABELS: Record<string, string> = {
 function runTypeLabel(type: string) {
   return (
     RUN_TYPE_LABELS[type] ??
-    type.toLowerCase().replaceAll("_", " ").replace(/^\w/, (c) => c.toUpperCase())
+    type
+      .toLowerCase()
+      .replaceAll("_", " ")
+      .replace(/^\w/, (c) => c.toUpperCase())
   );
 }
 
-export default async function DashboardPage() {
+const QUEUE_PREVIEW = 8;
+
+export default async function HomePage() {
   let org: Awaited<ReturnType<typeof api.viewer.activeOrganization>>;
   let summary: Awaited<ReturnType<typeof api.dashboard.summary>>;
   let requests: Awaited<ReturnType<typeof api.featureRequest.list>>;
@@ -113,10 +99,10 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      label: "Feature requests",
+      label: "Requests",
       value: summary.totals.featureRequests,
       icon: Inbox,
-      href: "/feature-requests",
+      href: "/requests",
     },
     {
       label: "Projects",
@@ -138,20 +124,103 @@ export default async function DashboardPage() {
     },
   ];
 
-  const populatedStatuses = STATUS_ORDER.filter(
-    (s) => (summary.countsByStatus[s] ?? 0) > 0,
-  );
-
-  // Requests blocked on a human decision, most urgent stage first.
-  const needsAttention = ATTENTION_ORDER.flatMap((status) =>
+  // The absorbed Approvals inbox: everything blocked on a human decision,
+  // most ship-critical first.
+  const needsDecision = ATTENTION_STATUSES.flatMap((status) =>
     requests.filter((r) => r.status === status),
   );
-  const attentionPreview = needsAttention.slice(0, 6);
+  const queuePreview = needsDecision.slice(0, QUEUE_PREVIEW);
+
+  // Pipeline overview: requests per stage bucket (closed shown only when
+  // non-empty).
+  const stageRows = STAGE_FILTERS.map((f) => ({
+    ...f,
+    count: f.statuses.reduce(
+      (sum, s) => sum + (summary.countsByStatus[s] ?? 0),
+      0,
+    ),
+  })).filter((row) => row.key !== "closed" || row.count > 0);
+
+  // First run: teach the loop instead of showing empty modules.
+  if (summary.totals.featureRequests === 0) {
+    const steps = [
+      {
+        label: "Create a project",
+        done: summary.totals.projects > 0,
+        href: "/projects",
+        hint: "Projects group requests and hold the repo connection.",
+      },
+      {
+        label: "Connect a GitHub repository",
+        done: summary.totals.repositories > 0,
+        href: "/settings/integrations",
+        hint: "The coding agent implements tasks and opens PRs there.",
+      },
+      {
+        label: "Submit your first request",
+        done: false,
+        href: "/requests?new=1",
+        hint: "Then follow it through discovery → PRD → plan → build → review → ship.",
+      },
+    ];
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          eyebrow="Home"
+          title={org.name}
+          description={
+            <>
+              {org.subscription?.plan ?? "FREE"} plan · your role: {org.role}
+            </>
+          }
+          actions={
+            <Button render={<Link href="/requests?new=1" />}>
+              <Plus className="size-4" />
+              New request
+            </Button>
+          }
+        />
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome to ZenBuild</CardTitle>
+            <CardDescription>
+              AI does the work; you own the decisions. Three steps to your
+              first shipped feature:
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-4">
+              {steps.map((step, i) => (
+                <li key={step.label} className="flex items-start gap-3">
+                  {step.done ? (
+                    <CheckCircle2 className="text-primary mt-0.5 size-5 shrink-0" />
+                  ) : (
+                    <Circle className="text-muted-foreground mt-0.5 size-5 shrink-0" />
+                  )}
+                  <span>
+                    <Link
+                      href={step.href}
+                      className="font-medium hover:text-primary hover:underline"
+                    >
+                      {i + 1}. {step.label}
+                    </Link>
+                    <span className="text-muted-foreground block text-sm">
+                      {step.hint}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Dashboard"
+        eyebrow="Home"
         title={org.name}
         description={
           <>
@@ -159,7 +228,7 @@ export default async function DashboardPage() {
           </>
         }
         actions={
-          <Button render={<Link href="/feature-requests?new=1" />}>
+          <Button render={<Link href="/requests?new=1" />}>
             <Plus className="size-4" />
             New request
           </Button>
@@ -178,168 +247,172 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCheck className="size-4 text-primary" />
-            Needs your attention
-          </CardTitle>
-          <CardDescription>
-            Requests waiting on a decision or a fix from your team.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {attentionPreview.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Nothing is waiting on you right now. New requests, PRD approvals,
-              plan approvals, and ship decisions will show up here.
-            </p>
-          ) : (
-            <>
-              <div className="app-attn-list">
-                {attentionPreview.map((r) => {
-                  const status = r.status as FeatureRequestStatus;
-                  const action = NEXT_ACTION[status];
-                  return (
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCheck className="size-4 text-primary" />
+                Needs your decision
+              </CardTitle>
+              <CardDescription>
+                Requests blocked on a human — approvals, ship calls, and fixes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {queuePreview.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  Nothing is waiting on you right now. PRD approvals, plan
+                  approvals, fixes, and ship decisions land here.
+                </p>
+              ) : (
+                <>
+                  <div className="app-attn-list">
+                    {queuePreview.map((r) => {
+                      const status = r.status as FeatureRequestStatus;
+                      const action = NEXT_ACTION[status];
+                      return (
+                        <Link
+                          key={r.id}
+                          href={action?.href(r.id) ?? `/requests/${r.id}`}
+                          className="app-attn-item"
+                        >
+                          <span className="min-w-0">
+                            <span className="app-attn-title">{r.title}</span>
+                            <span className="app-attn-sub block">
+                              <Badge
+                                variant={STATUS_BADGE_VARIANT[status]}
+                                className="mr-1.5 align-middle"
+                              >
+                                {STATUS_LABELS[status]}
+                              </Badge>
+                              {r.project ? r.project.key : ""}
+                            </span>
+                          </span>
+                          {action && (
+                            <span className="app-attn-cta">
+                              {action.label}
+                              <ArrowRight className="size-3.5" />
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  {needsDecision.length > queuePreview.length && (
                     <Link
-                      key={r.id}
-                      href={action?.href(r.id) ?? `/feature-requests/${r.id}`}
+                      href="/requests?attention=1"
+                      className="text-primary mt-3 inline-block text-sm font-medium hover:underline"
+                    >
+                      See all {needsDecision.length} →
+                    </Link>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="size-4 text-primary" />
+                Recent activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {summary.recentActivity.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  No activity yet.
+                </p>
+              ) : (
+                <ul>
+                  {summary.recentActivity.map((log) => (
+                    <li key={log.id} className="app-activity-item">
+                      <span>
+                        <span className="font-medium">{log.actor}</span>{" "}
+                        <span className="text-muted-foreground">
+                          {log.action}
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground shrink-0 text-xs">
+                        {log.createdAt.toLocaleString()}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pipeline</CardTitle>
+              <CardDescription>
+                Requests by stage — click through to the filtered list.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul>
+                {stageRows.map((row) => (
+                  <li key={row.key}>
+                    <Link
+                      href={`/requests?stage=${row.key}`}
                       className="app-attn-item"
                     >
-                      <span className="min-w-0">
-                        <span className="app-attn-title">{r.title}</span>
-                        <span className="app-attn-sub block">
-                          {STATUS_LABELS[status]}
-                          {r.project ? ` · ${r.project.key}` : ""}
-                        </span>
+                      <span className="app-attn-title">{row.label}</span>
+                      <span className="app-pipeline-chip">
+                        <strong>{row.count}</strong>
                       </span>
-                      {action && (
-                        <span className="app-attn-cta">
-                          {action.label}
-                          <ArrowRight className="size-3.5" />
-                        </span>
-                      )}
                     </Link>
-                  );
-                })}
-              </div>
-              {needsAttention.length > attentionPreview.length && (
-                <Link
-                  href="/approvals"
-                  className="text-primary mt-3 inline-block text-sm font-medium hover:underline"
-                >
-                  See all {needsAttention.length} in Approvals →
-                </Link>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Pipeline</CardTitle>
-            <CardDescription>
-              Feature requests by stage — click a stage to see its requests.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {populatedStatuses.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                No feature requests yet.{" "}
-                <Link
-                  href="/feature-requests?new=1"
-                  className="font-medium text-primary hover:underline"
-                >
-                  Create your first
-                </Link>{" "}
-                to get started.
-              </p>
-            ) : (
-              <div className="app-pipeline">
-                {populatedStatuses.map((s) => (
-                  <Link
-                    key={s}
-                    href={`/feature-requests?status=${s}`}
-                    className="app-pipeline-chip"
-                  >
-                    {STATUS_LABELS[s]}
-                    <strong>{summary.countsByStatus[s]}</strong>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Loader2 className="size-4 text-primary" />
-              In-flight workflows
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {summary.activeRuns.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                No workflows running.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {summary.activeRuns.map((run) => (
-                  <li key={run.id} className="text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">
-                        {runTypeLabel(run.type)}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        {run.progress}%
-                      </span>
-                    </div>
-                    {run.featureRequest && (
-                      <Link
-                        href={`/feature-requests/${run.featureRequest.id}`}
-                        className="text-muted-foreground hover:text-primary text-xs hover:underline"
-                      >
-                        {run.featureRequest.title}
-                      </Link>
-                    )}
                   </li>
                 ))}
               </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="size-4 text-primary" />
-            Recent activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {summary.recentActivity.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No activity yet.</p>
-          ) : (
-            <ul>
-              {summary.recentActivity.map((log) => (
-                <li key={log.id} className="app-activity-item">
-                  <span>
-                    <span className="font-medium">{log.actor}</span>{" "}
-                    <span className="text-muted-foreground">{log.action}</span>
-                  </span>
-                  <span className="text-muted-foreground shrink-0 text-xs">
-                    {log.createdAt.toLocaleString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Loader2 className="size-4 text-primary" />
+                In flight
+              </CardTitle>
+              <CardDescription>AI workflows running right now.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {summary.activeRuns.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  No workflows running.
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {summary.activeRuns.map((run) => (
+                    <li key={run.id} className="text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">
+                          {runTypeLabel(run.type)}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {run.progress}%
+                        </span>
+                      </div>
+                      {run.featureRequest && (
+                        <Link
+                          href={`/requests/${run.featureRequest.id}`}
+                          className="text-muted-foreground hover:text-primary text-xs hover:underline"
+                        >
+                          {run.featureRequest.title}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

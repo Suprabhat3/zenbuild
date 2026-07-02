@@ -5,8 +5,7 @@ import Link from "next/link";
 
 /**
  * Root error boundary for everything outside the app shell (landing, auth,
- * legal, onboarding). Branded via the `.authx` scope, since the visitor may
- * not be signed in.
+ * legal, onboarding). The warm theme is global, so no scope wrapper is needed.
  */
 export default function RootError({
   error,
@@ -20,8 +19,7 @@ export default function RootError({
   }, [error]);
 
   return (
-    <div className="authx">
-      <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
         <span className="auth-wordmark mb-8">ZenBuild</span>
         <h1 className="auth-title mb-2">Something went wrong</h1>
         <p className="auth-subtitle mx-auto mb-8 max-w-md">
@@ -40,7 +38,6 @@ export default function RootError({
             Back to home
           </Link>
         </div>
-      </div>
     </div>
   );
 }

@@ -46,9 +46,17 @@ const serverSchema = z.object({
   GITHUB_APP_PRIVATE_KEY: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().optional(),
 
-  // Phase 4+ — Inngest
-  INNGEST_EVENT_KEY: z.string().optional(),
-  INNGEST_SIGNING_KEY: z.string().optional(),
+  // Phase 4+ — Inngest. Empty strings coerce to undefined: a blanked-out key
+  // in .env must read as "no key", or the SDK half-enters cloud mode and the
+  // local dev server refuses to sync ("expected server kind cloud, got dev").
+  INNGEST_EVENT_KEY: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+  INNGEST_SIGNING_KEY: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
 
   // Phase 13 — Razorpay (test). Plan ids are the test-mode subscription plan
   // ids created in the Razorpay dashboard (one per paid tier); when unset the

@@ -1,10 +1,8 @@
 import {
-  ClipboardCheck,
   CreditCard,
   FolderKanban,
-  GitPullRequest,
+  Home,
   Inbox,
-  LayoutDashboard,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -17,18 +15,25 @@ export interface NavItem {
   matchPrefix?: boolean;
 }
 
-/** Primary sidebar navigation for the authenticated app shell. */
-export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Projects", href: "/projects", icon: FolderKanban, matchPrefix: true },
-  {
-    label: "Feature Requests",
-    href: "/feature-requests",
-    icon: Inbox,
-    matchPrefix: true,
-  },
-  { label: "Reviews", href: "/reviews", icon: GitPullRequest, matchPrefix: true },
-  { label: "Approvals", href: "/approvals", icon: ClipboardCheck, matchPrefix: true },
-  { label: "Billing", href: "/billing", icon: CreditCard },
-  { label: "Settings", href: "/settings", icon: Settings, matchPrefix: true },
+/**
+ * Primary sidebar navigation, grouped into sections rendered with a divider
+ * between them. Deliberately five items (docs/frontend-redesign-plan.md §4.1):
+ * Approvals lives in Home's "Needs your decision" queue and Reviews inside
+ * each request's workspace — neither is a top-level destination.
+ */
+export const NAV_SECTIONS: NavItem[][] = [
+  [
+    { label: "Home", href: "/dashboard", icon: Home },
+    { label: "Requests", href: "/requests", icon: Inbox, matchPrefix: true },
+    {
+      label: "Projects",
+      href: "/projects",
+      icon: FolderKanban,
+      matchPrefix: true,
+    },
+  ],
+  [
+    { label: "Billing", href: "/billing", icon: CreditCard },
+    { label: "Settings", href: "/settings", icon: Settings, matchPrefix: true },
+  ],
 ];

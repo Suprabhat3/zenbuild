@@ -40,10 +40,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  NEXT_ACTION,
   PRIORITY_LABELS,
   SOURCE_LABELS,
-  STATUS_BADGE_VARIANT,
+  STAGE_FILTERS,
   STATUS_LABELS,
+  STATUS_STAGE_FILTER,
   type FeatureRequestStatus,
 } from "@/lib/feature-request";
 import { api } from "@/trpc/react";
@@ -68,20 +70,6 @@ export interface ProjectOption {
 const NO_PROJECT = "__none__";
 const ALL_PROJECTS = "__all__";
 
-/** Fixed set of chips for the status filter row (terminal odd-cases omitted). */
-const FILTER_STATUSES: FeatureRequestStatus[] = [
-  "DRAFT",
-  "CLARIFYING",
-  "PRD_DRAFTED",
-  "PRD_APPROVED",
-  "TASKS_READY",
-  "IN_DEVELOPMENT",
-  "IN_REVIEW",
-  "FIX_NEEDED",
-  "APPROVED",
-  "SHIPPED",
-];
-
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
@@ -91,14 +79,16 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 export function FeatureRequestsManager({
   requests,
   projects,
-  activeStatus,
+  activeStage,
+  attention,
   activeProjectId,
   openCreate,
   createProjectId,
 }: {
   requests: FeatureRequestRow[];
   projects: ProjectOption[];
-  activeStatus: FeatureRequestStatus | null;
+  activeStage: string | null;
+  attention: boolean;
   activeProjectId: string | null;
   openCreate: boolean;
   createProjectId: string | null;
@@ -114,6 +104,7 @@ export function FeatureRequestsManager({
   const [projectId, setProjectId] = useState<string>(NO_PROJECT);
   const [requesterName, setRequesterName] = useState("");
   const [requesterEmail, setRequesterEmail] = useState("");
+  const [autoStartDiscovery, setAutoStartDiscovery] = useState(true);
 
   // `?new=1` deep-links straight into the create dialog (e.g. from a project
   // page). Open it once, preselect the project, then strip the flag from the
@@ -125,18 +116,35 @@ export function FeatureRequestsManager({
     const params = new URLSearchParams(searchParams.toString());
     params.delete("new");
     const query = params.toString();
-    router.replace(`/feature-requests${query ? `?${query}` : ""}`, {
+    router.replace(`/requests${query ? `?${query}` : ""}`, {
       scroll: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openCreate, createProjectId]);
 
+  const startDiscovery = api.clarification.start.useMutation();
+
   const create = api.featureRequest.create.useMutation({
-    onSuccess: (res) => {
-      toast.success("Feature request created.");
+    onSuccess: async (res) => {
       setOpen(false);
       resetForm();
-      router.push(`/feature-requests/${res.id}`);
+      // Put the agent to work immediately — the workspace opens onto the
+      // discovery conversation already in progress.
+      if (autoStartDiscovery) {
+        try {
+          await startDiscovery.mutateAsync({ featureRequestId: res.id });
+          toast.success("Request created — the agent is on it.");
+        } catch (err) {
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "Request created, but discovery couldn't start — start it from the request.",
+          );
+        }
+      } else {
+        toast.success("Request created.");
+      }
+      router.push(`/requests/${res.id}`);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -164,19 +172,22 @@ export function FeatureRequestsManager({
     });
   }
 
-  /** Build a filter URL, preserving the other active filter. */
+  /** Build a filter URL, preserving the other active filters. */
   function filterHref(next: {
-    status?: FeatureRequestStatus | null;
+    stage?: string | null;
+    attention?: boolean;
     projectId?: string | null;
   }) {
-    const status = next.status === undefined ? activeStatus : next.status;
+    const stage = next.stage === undefined ? activeStage : next.stage;
+    const attn = next.attention === undefined ? attention : next.attention;
     const projectId =
       next.projectId === undefined ? activeProjectId : next.projectId;
     const params = new URLSearchParams();
-    if (status) params.set("status", status);
+    if (stage) params.set("stage", stage);
+    if (attn) params.set("attention", "1");
     if (projectId) params.set("projectId", projectId);
     const query = params.toString();
-    return `/feature-requests${query ? `?${query}` : ""}`;
+    return `/requests${query ? `?${query}` : ""}`;
   }
 
   function onProjectFilterChange(value: string | null) {
@@ -192,14 +203,16 @@ export function FeatureRequestsManager({
     return requests.filter((r) => r.title.toLowerCase().includes(needle));
   }, [requests, search]);
 
-  const hasFilters = Boolean(activeStatus || activeProjectId || search.trim());
+  const hasFilters = Boolean(
+    activeStage || attention || activeProjectId || search.trim(),
+  );
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Delivery loop"
-        title="Feature requests"
-        description="The entry point of the delivery loop. Capture requests from any source."
+        title="Requests"
+        description="Every feature request, from intake to ship. Capture requests from any source."
         actions={
           <Button onClick={() => setOpen(true)} className="gap-1.5">
             <Plus className="size-4" />
@@ -209,24 +222,35 @@ export function FeatureRequestsManager({
       />
 
       <div className="space-y-4">
-        <div className="app-pipeline" role="navigation" aria-label="Filter by status">
+        <div
+          className="app-pipeline"
+          role="navigation"
+          aria-label="Filter by pipeline stage"
+        >
           <Link
-            href={filterHref({ status: null })}
-            className={`app-pipeline-chip${activeStatus === null ? " is-active" : ""}`}
-            aria-current={activeStatus === null ? "true" : undefined}
+            href={filterHref({ stage: null })}
+            className={`app-pipeline-chip${activeStage === null ? " is-active" : ""}`}
+            aria-current={activeStage === null ? "true" : undefined}
           >
             All
           </Link>
-          {FILTER_STATUSES.map((s) => (
+          {STAGE_FILTERS.map((f) => (
             <Link
-              key={s}
-              href={filterHref({ status: s })}
-              className={`app-pipeline-chip${activeStatus === s ? " is-active" : ""}`}
-              aria-current={activeStatus === s ? "true" : undefined}
+              key={f.key}
+              href={filterHref({ stage: f.key })}
+              className={`app-pipeline-chip${activeStage === f.key ? " is-active" : ""}`}
+              aria-current={activeStage === f.key ? "true" : undefined}
             >
-              {STATUS_LABELS[s]}
+              {f.label}
             </Link>
           ))}
+          <Link
+            href={filterHref({ attention: !attention })}
+            className={`app-pipeline-chip${attention ? " is-active" : ""}`}
+            aria-pressed={attention}
+          >
+            Needs attention
+          </Link>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -269,7 +293,7 @@ export function FeatureRequestsManager({
               action={
                 <Button
                   variant="outline"
-                  render={<Link href="/feature-requests" />}
+                  render={<Link href="/requests" />}
                   onClick={() => setSearch("")}
                 >
                   Clear filters
@@ -302,53 +326,60 @@ export function FeatureRequestsManager({
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Source</TableHead>
+                  <TableHead>Stage</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Project</TableHead>
                   <TableHead>Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibleRequests.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <Link
-                        href={`/feature-requests/${r.id}`}
-                        className="font-medium hover:text-primary hover:underline"
-                      >
-                        {r.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          STATUS_BADGE_VARIANT[r.status as FeatureRequestStatus]
-                        }
-                      >
-                        {STATUS_LABELS[r.status as FeatureRequestStatus]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {SOURCE_LABELS[r.source] ?? r.source}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {PRIORITY_LABELS[r.priority] ?? r.priority}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {r.project ? (
-                        <Badge variant="outline" className="font-mono">
-                          {r.project.key}
+                {visibleRequests.map((r) => {
+                  const status = r.status as FeatureRequestStatus;
+                  const stageChip = STATUS_STAGE_FILTER[status];
+                  const hint =
+                    NEXT_ACTION[status]?.hint ??
+                    (status === "SHIPPED"
+                      ? "Shipped — nothing left to do."
+                      : `Closed — ${STATUS_LABELS[status].toLowerCase()}.`);
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="max-w-md">
+                        <Link
+                          href={`/requests/${r.id}`}
+                          className="font-medium hover:text-primary hover:underline"
+                        >
+                          {r.title}
+                        </Link>
+                        <span className="text-muted-foreground mt-0.5 block truncate text-xs">
+                          {hint}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {stageChip.label}
+                          <span className="text-muted-foreground font-normal">
+                            · {STATUS_LABELS[status]}
+                          </span>
                         </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                      {dateFormatter.format(new Date(r.createdAt))}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {PRIORITY_LABELS[r.priority] ?? r.priority}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {r.project ? (
+                          <Badge variant="outline" className="font-mono">
+                            {r.project.key}
+                          </Badge>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                        {dateFormatter.format(new Date(r.createdAt))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -359,7 +390,7 @@ export function FeatureRequestsManager({
         <DialogContent>
           <form onSubmit={onSubmit}>
             <DialogHeader>
-              <DialogTitle>New feature request</DialogTitle>
+              <DialogTitle>New request</DialogTitle>
               <DialogDescription>
                 Capture what the customer or product owner is asking for.
               </DialogDescription>
@@ -469,6 +500,22 @@ export function FeatureRequestsManager({
                   />
                 </div>
               </div>
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={autoStartDiscovery}
+                  onChange={(e) => setAutoStartDiscovery(e.target.checked)}
+                  disabled={create.isPending}
+                  className="accent-primary mt-0.5 size-4 cursor-pointer"
+                />
+                <span>
+                  <span className="font-medium">Start discovery right away</span>
+                  <span className="text-muted-foreground block text-xs">
+                    The agent immediately analyzes the request and asks its
+                    follow-up questions.
+                  </span>
+                </span>
+              </label>
             </div>
             <DialogFooter>
               <Button

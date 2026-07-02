@@ -334,14 +334,6 @@ export function ReviewPanel({
           );
         })}
 
-        {reviews.length > 0 && (
-          <Link
-            href={`/feature-requests/${featureRequestId}/reviews`}
-            className="text-primary inline-block text-sm font-medium hover:underline"
-          >
-            Full review history →
-          </Link>
-        )}
       </CardContent>
     </Card>
   );

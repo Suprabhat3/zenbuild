@@ -7,13 +7,11 @@ import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="authx">
-      <div className="auth-split">
-        <AuthBrandPanel />
-        <main className="auth-panel">
-          <div className="auth-card">{children}</div>
-        </main>
-      </div>
+    <div className="auth-split">
+      <AuthBrandPanel />
+      <main className="auth-panel">
+        <div className="auth-card">{children}</div>
+      </main>
     </div>
   );
 }

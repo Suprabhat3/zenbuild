@@ -80,9 +80,10 @@ export default async function ProjectDetailPage({
 
       <div className="app-stat-grid sm:grid-cols-2 lg:grid-cols-2">
         <StatCard
-          label="Feature requests"
+          label="Requests"
           value={project.featureRequestCount}
           icon={Inbox}
+          href={`/requests?projectId=${id}`}
         />
         <StatCard
           label="Repositories"
@@ -99,7 +100,7 @@ export default async function ProjectDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Feature requests</CardTitle>
+          <CardTitle>Requests</CardTitle>
         </CardHeader>
         <CardContent>
           {requests.length === 0 ? (
@@ -111,36 +112,44 @@ export default async function ProjectDetailPage({
                 <Button
                   className="gap-1.5"
                   render={
-                    <Link href={`/feature-requests?new=1&projectId=${id}`} />
+                    <Link href={`/requests?new=1&projectId=${id}`} />
                   }
                 >
                   <Plus className="size-4" />
-                  New feature request
+                  New request
                 </Button>
               }
             />
           ) : (
-            <ul>
-              {requests.map((r) => (
-                <li key={r.id}>
-                  <Link
-                    href={`/feature-requests/${r.id}`}
-                    className="hover:bg-muted/40 -mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3 transition-colors"
-                  >
-                    <span className="truncate text-sm font-medium">
-                      {r.title}
-                    </span>
-                    <Badge
-                      variant={
-                        STATUS_BADGE_VARIANT[r.status as FeatureRequestStatus]
-                      }
+            <>
+              <ul>
+                {requests.map((r) => (
+                  <li key={r.id}>
+                    <Link
+                      href={`/requests/${r.id}`}
+                      className="hover:bg-muted/40 -mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3 transition-colors"
                     >
-                      {STATUS_LABELS[r.status as FeatureRequestStatus]}
-                    </Badge>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                      <span className="truncate text-sm font-medium">
+                        {r.title}
+                      </span>
+                      <Badge
+                        variant={
+                          STATUS_BADGE_VARIANT[r.status as FeatureRequestStatus]
+                        }
+                      >
+                        {STATUS_LABELS[r.status as FeatureRequestStatus]}
+                      </Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={`/requests?projectId=${id}`}
+                className="text-primary mt-3 inline-block text-sm font-medium hover:underline"
+              >
+                Open in Requests →
+              </Link>
+            </>
           )}
         </CardContent>
       </Card>
