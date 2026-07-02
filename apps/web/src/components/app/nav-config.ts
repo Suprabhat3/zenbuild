@@ -17,10 +17,7 @@ export interface NavItem {
   matchPrefix?: boolean;
 }
 
-/**
- * Primary sidebar navigation. Later phases light up the routes that are
- * currently placeholders (projects, feature requests, repos, reviews, billing).
- */
+/** Primary sidebar navigation for the authenticated app shell. */
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban, matchPrefix: true },

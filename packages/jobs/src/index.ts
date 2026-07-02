@@ -8,6 +8,7 @@ import { releaseReadinessFn } from "./functions/releaseReadiness";
 import { repoAnalyzeFn } from "./functions/repoAnalyze";
 import { taskImplementFn } from "./functions/taskImplement";
 import { generateTasksFn } from "./functions/tasksGenerate";
+import { workflowReconcileFn } from "./functions/workflowReconcile";
 
 export {
   inngest,
@@ -42,6 +43,7 @@ export {
 } from "./client";
 
 export { enqueuePrReview, shouldAutoReviewAfterSync } from "./triggerReview";
+export { sendWorkflowEvent } from "./sendRunEvent";
 export { computeFeatureReviewStatus } from "./reviewStatus";
 export type { FeatureReviewPipelineStatus } from "./reviewStatus";
 
@@ -57,4 +59,5 @@ export const functions = [
   taskImplementFn,
   prReviewFn,
   releaseReadinessFn,
+  workflowReconcileFn,
 ];

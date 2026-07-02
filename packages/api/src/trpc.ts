@@ -64,33 +64,41 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
  * through this, and `ctx.organizationId` is the trusted scope for all DB access.
  */
 export const orgProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const organizationId = ctx.session.activeOrganizationId;
-  if (!organizationId) {
+  const activeId = ctx.session.activeOrganizationId;
+
+  let membership = activeId
+    ? await ctx.db.member.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId: activeId,
+            userId: ctx.session.user.id,
+          },
+        },
+      })
+    : null;
+
+  // The session pointer can be null or stale (e.g. a session created before
+  // onboarding finished, or the user was removed from that org). Fall back to
+  // the user's first membership — the same rule the session-create hook and the
+  // app shell use — instead of failing every org-scoped call until the client
+  // manages to call `organization.setActive`.
+  if (!membership) {
+    membership = await ctx.db.member.findFirst({
+      where: { userId: ctx.session.user.id },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  if (!membership) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "No active organization selected.",
     });
   }
 
-  const membership = await ctx.db.member.findUnique({
-    where: {
-      organizationId_userId: {
-        organizationId,
-        userId: ctx.session.user.id,
-      },
-    },
-  });
-
-  if (!membership) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "You are not a member of the active organization.",
-    });
-  }
-
   return next({
     ctx: {
-      organizationId,
+      organizationId: membership.organizationId,
       membership,
       role: membership.role,
     },

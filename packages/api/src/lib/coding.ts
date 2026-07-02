@@ -1,14 +1,14 @@
 import type { PrismaClient } from "@zenbuild/db";
 import {
-  inngest,
   repoAnalyzeRequested,
+  sendWorkflowEvent,
   taskImplementRequested,
 } from "@zenbuild/jobs";
 
 /**
  * Kicks off the Phase-8 coding workflows. As with discovery, the `WorkflowRun`
- * row is created first (so intent is never lost) and the Inngest event is sent
- * after; the two are correlated by `workflowRunId`.
+ * row is created first and the Inngest event is sent after (marked FAILED if
+ * the send fails); the two are correlated by `workflowRunId`.
  */
 
 export async function triggerRepoAnalyze(
@@ -33,7 +33,9 @@ export async function triggerRepoAnalyze(
     },
   });
 
-  await inngest.send(
+  await sendWorkflowEvent(
+    db,
+    run.id,
     repoAnalyzeRequested.create({
       organizationId: args.organizationId,
       repositoryId: args.repositoryId,
@@ -70,7 +72,9 @@ export async function triggerTaskImplement(
     },
   });
 
-  await inngest.send(
+  await sendWorkflowEvent(
+    db,
+    run.id,
     taskImplementRequested.create({
       organizationId: args.organizationId,
       featureRequestId: args.featureRequestId,

@@ -246,13 +246,19 @@ export const githubRouter = createTRPCRouter({
         return created;
       });
 
+      // Both follow-ups are best-effort: the repo is already connected, so a
+      // failure to queue them must not fail the mutation. PRs sync on the next
+      // webhook event, and task-implement self-heals a missing analysis.
+
       // Backfill currently-open PRs so the list isn't empty until the next event.
-      await inngest.send(
-        githubRepoBackfillRequested.create({
-          organizationId: ctx.organizationId,
-          repositoryId: repository.id,
-        }),
-      );
+      await inngest
+        .send(
+          githubRepoBackfillRequested.create({
+            organizationId: ctx.organizationId,
+            repositoryId: repository.id,
+          }),
+        )
+        .catch(() => {});
 
       // Analyze the repo up front so the coding agent (Phase 8) has grounding
       // context ready before the first task is implemented.
@@ -260,7 +266,7 @@ export const githubRouter = createTRPCRouter({
         organizationId: ctx.organizationId,
         repositoryId: repository.id,
         actorId: ctx.user.id,
-      });
+      }).catch(() => {});
 
       return { id: repository.id, fullName: match.fullName };
     }),

@@ -159,20 +159,50 @@ export const billingRouter = createTRPCRouter({
         });
       }
 
-      const sub = await createRazorpaySubscription({
-        planId,
-        notes: {
-          organizationId: ctx.organizationId,
-          tier: input.plan,
-          workspace: org.name,
-        },
+      // The local row must exist before we create anything on Razorpay's side:
+      // a live remote subscription whose id we can't persist would be an orphan
+      // the webhook can never map back to this org.
+      const localSub = await ctx.db.subscription.findUnique({
+        where: { organizationId: ctx.organizationId },
+        select: { id: true },
       });
+      if (!localSub) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "No subscription record exists for this workspace. Please contact support.",
+        });
+      }
+
+      let sub: Awaited<ReturnType<typeof createRazorpaySubscription>>;
+      try {
+        sub = await createRazorpaySubscription({
+          planId,
+          notes: {
+            organizationId: ctx.organizationId,
+            tier: input.plan,
+            workspace: org.name,
+          },
+        });
+      } catch {
+        throw new TRPCError({
+          code: "BAD_GATEWAY",
+          message:
+            "We couldn't start checkout with our payment provider. Please try again in a moment.",
+        });
+      }
 
       // Persist the pending subscription id so the webhook can resolve the org.
-      await ctx.db.subscription.update({
-        where: { organizationId: ctx.organizationId },
-        data: { razorpaySubId: sub.id },
-      });
+      // If this fails, cancel the just-created remote subscription (best effort)
+      // rather than leaving an unmapped subscription live on Razorpay.
+      try {
+        await ctx.db.subscription.update({
+          where: { organizationId: ctx.organizationId },
+          data: { razorpaySubId: sub.id },
+        });
+      } catch (err) {
+        await cancelRazorpaySubscription(sub.id, false).catch(() => {});
+        throw err;
+      }
 
       await ctx.db.auditLog.create({
         data: {

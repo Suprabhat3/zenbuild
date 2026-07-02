@@ -1,8 +1,8 @@
 import type { PrismaClient, WorkflowType } from "@zenbuild/db";
 import {
   clarifyRequested,
-  inngest,
   prdRequested,
+  sendWorkflowEvent,
   tasksRequested,
 } from "@zenbuild/jobs";
 
@@ -12,8 +12,8 @@ import {
  * are correlated by `workflowRunId` so the function can drive the run's status.
  *
  * The WorkflowRun is created first and the event is sent after — if Inngest is
- * unreachable (e.g. dev server not running) the run simply stays QUEUED and the
- * error surfaces to the caller, rather than losing the audit trail of the intent.
+ * unreachable (e.g. dev server not running) the run is marked FAILED and the
+ * error surfaces to the caller, rather than stranding a phantom QUEUED run.
  */
 async function triggerDiscovery(
   db: PrismaClient,
@@ -49,7 +49,7 @@ async function triggerDiscovery(
         ? prdRequested.create(payload)
         : tasksRequested.create(payload);
 
-  await inngest.send(event);
+  await sendWorkflowEvent(db, run.id, event);
 
   return run;
 }

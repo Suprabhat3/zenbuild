@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Activity,
+  AlertTriangle,
   FolderKanban,
   GitBranch,
   Inbox,
@@ -9,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { StatCard } from "@/components/app/stat-card";
 import {
@@ -53,7 +55,21 @@ export default async function DashboardPage() {
     ]);
   } catch {
     return (
-      <p className="text-muted-foreground text-sm">Loading your workspace…</p>
+      <div className="app-panel">
+        <EmptyState
+          icon={AlertTriangle}
+          title="We couldn't load your workspace"
+          description="Something went wrong while fetching your dashboard. It's usually temporary."
+          action={
+            <Link
+              href="/dashboard"
+              className="text-primary text-sm font-medium hover:underline"
+            >
+              Try again
+            </Link>
+          }
+        />
+      </div>
     );
   }
 

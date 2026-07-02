@@ -1,7 +1,8 @@
 import { hasCreditsFor, workflowCreditCost } from "@zenbuild/billing";
 import { db } from "@zenbuild/db";
 
-import { inngest, prReviewRequested } from "./client";
+import { prReviewRequested } from "./client";
+import { sendWorkflowEvent } from "./sendRunEvent";
 
 const REVIEWABLE_FEATURE_STATUSES = [
   "IN_DEVELOPMENT",
@@ -126,7 +127,9 @@ export async function enqueuePrReview(args: {
     },
   });
 
-  await inngest.send(
+  await sendWorkflowEvent(
+    db,
+    run.id,
     prReviewRequested.create({
       organizationId: args.organizationId,
       pullRequestId: args.pullRequestId,

@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@zenbuild/db";
-import { inngest, releaseReadinessRequested } from "@zenbuild/jobs";
+import { releaseReadinessRequested, sendWorkflowEvent } from "@zenbuild/jobs";
 
 /**
  * Kicks off an AI release-readiness assessment for a feature request. Creates the
@@ -22,7 +22,9 @@ export async function triggerReleaseReadiness(
     },
   });
 
-  await inngest.send(
+  await sendWorkflowEvent(
+    db,
+    run.id,
     releaseReadinessRequested.create({
       organizationId,
       featureRequestId,
